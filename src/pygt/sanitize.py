@@ -3,8 +3,8 @@ from typing import Callable
 import numpy as np
 from scipy.interpolate import interp1d
 
-from pycam.exceptions import MissingSignalError
-from pycam.simdata import CaseData
+from pygt.exceptions import MissingSignalError
+from pygt.simdata import CaseData
 
 
 class QDAResultsAlign:

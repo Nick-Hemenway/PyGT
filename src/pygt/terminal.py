@@ -2,7 +2,7 @@ import logging
 import re
 import subprocess
 
-import pycam.exceptions as exc
+import pygt.exceptions as exc
 
 logger = logging.getLogger(__name__)
 

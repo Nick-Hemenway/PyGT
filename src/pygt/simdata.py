@@ -5,8 +5,8 @@ from functools import cached_property
 import numpy as np
 import pandas as pd
 
-from pycam.cases import CaseList, ExpandedCaseList
-from pycam.exceptions import MissingSignalError
+from pygt.cases import CaseList, ExpandedCaseList
+from pygt.exceptions import MissingSignalError
 
 
 class CaseStatus(StrEnum):

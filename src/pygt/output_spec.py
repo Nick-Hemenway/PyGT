@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from pycam.util import sanitize_path
+from pygt.util import sanitize_path
 
 
 @dataclass

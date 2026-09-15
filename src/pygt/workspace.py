@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Literal, Protocol
 from uuid import uuid4
 
-from pycam.output_spec import ExportSpec
-from pycam.util import sanitize_path
+from pygt.output_spec import ExportSpec
+from pygt.util import sanitize_path
 
 
 class WorkspaceStatus(StrEnum):

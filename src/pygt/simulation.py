@@ -3,10 +3,10 @@ from dataclasses import dataclass
 from subprocess import CompletedProcess
 from time import perf_counter
 
-from pycam.exceptions import FileNotUpdatedError, GTLicenseError
-from pycam.terminal import run_terminal_commands
-from pycam.util import FileWatcher, retry
-from pycam.workspace import Workspace, WorkspaceRepository, WorkspaceStatus
+from pygt.exceptions import FileNotUpdatedError, GTLicenseError
+from pygt.terminal import run_terminal_commands
+from pygt.util import FileWatcher, retry
+from pygt.workspace import Workspace, WorkspaceRepository, WorkspaceStatus
 
 
 class ExecutionStrategy(ABC):

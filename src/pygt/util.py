@@ -6,7 +6,7 @@ import time
 from functools import wraps
 from pathlib import Path
 
-from pycam.exceptions import FileNotUpdatedError, GTError
+from pygt.exceptions import FileNotUpdatedError, GTError
 
 logger = logging.getLogger(__name__)
 

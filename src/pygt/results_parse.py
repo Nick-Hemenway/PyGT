@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from pycam.cases import CaseList, ExpandedCaseList
-from pycam.output_spec import ExportSpec, SampledOutputSpec
-from pycam.simdata import SimulationData
-from pycam.workspace import Workspace
+from pygt.cases import CaseList, ExpandedCaseList
+from pygt.output_spec import ExportSpec, SampledOutputSpec
+from pygt.simdata import SimulationData
+from pygt.workspace import Workspace
 
 
 def flatten_columns(old_cols: pd.MultiIndex, include_units: bool = True) -> list[str]:

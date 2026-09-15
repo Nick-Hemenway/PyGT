@@ -4,9 +4,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from pycam.cases import CaseList, ExpandedCaseList
-from pycam.exceptions import InconsistentParametersError
-from pycam.workspace import Workspace
+from pygt.cases import CaseList, ExpandedCaseList
+from pygt.exceptions import InconsistentParametersError
+from pygt.workspace import Workspace
 
 
 class DesignWriter:

@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from subprocess import CompletedProcess
 
-from pycam.exceptions import FileNotUpdatedError, GTLicenseError
-from pycam.output_spec import ExportSpec
-from pycam.terminal import run_terminal_commands
-from pycam.util import FileWatcher, retry
-from pycam.workspace import Workspace, WorkspaceStatus
+from pygt.exceptions import FileNotUpdatedError, GTLicenseError
+from pygt.output_spec import ExportSpec
+from pygt.terminal import run_terminal_commands
+from pygt.util import FileWatcher, retry
+from pygt.workspace import Workspace, WorkspaceStatus
 
 
 @dataclass
