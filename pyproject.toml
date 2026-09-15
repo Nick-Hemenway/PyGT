@@ -1,0 +1,46 @@
+[project]
+name = "pygt"
+dynamic = ["version"]
+description = "A python interface to communicate with gtsuite"
+readme = "README.md"
+authors = [
+    { name = "Nicholas Hemenway", email = "nhemenway@mercmarine.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2.5.3",
+    "optwrap",
+    "pandas>=3.0.5",
+]
+
+[project.optional-dependencies]
+extra = [
+    "ipykernel>=7.3.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.hatch.version]
+path = "src/pygt/__init__.py"
+
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+testpaths = [
+    "tests",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.uv.sources]
+optwrap = { git = "https://github.com/Mercury-PDE-DesignAnalysisGroup/Optimization-Abstraction-Layer", tag = "v5.1.0" }
