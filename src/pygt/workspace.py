@@ -117,8 +117,10 @@ class Workspace:
         )
 
     def set_status(self, status: WorkspaceStatus) -> None:
+        status_old = self.status
         self.status = status
         self._write_metadata()
+        logger.info("Workspace status updated: %s ---> %s", status_old, self.status)
 
     def mark_created(self):
         self.set_status(WorkspaceStatus.CREATED)
@@ -180,6 +182,7 @@ class WorkspaceFactory:
 
         # Mark work space as created
         # this automatically triggers writing the metadata file
+        logger.info("Workspace created: %s", ws.path)
         ws.mark_created()
         return ws
 
@@ -212,7 +215,9 @@ class WorkspaceRepository:
         self._workspaces = {}
 
     def refresh(self):
+        logger.debug("WorspaceRepository being refreshed")
         self._workspaces.clear()
+        logger.debug("All workspaces cleared from repository")
         for directory in self.root.iterdir():
             metadata_path = directory / "workspace.json"
             if not metadata_path.exists():
@@ -220,10 +225,14 @@ class WorkspaceRepository:
             metadata = json.loads(metadata_path.read_text())
             workspace = Workspace.from_metadata(metadata)
             self._workspaces[workspace.run_id] = workspace
+        logger.debug("Discovered workspaces %s", list(self._workspaces.keys()))
 
     def apply_retention_policy(self):
         to_delete = self.retention_policy.select_for_deletion(self.to_list())
         for workspace in to_delete:
+            logger.info(
+                "Removing workspace %s due to retention policy", workspace.run_id
+            )
             workspace.cleanup()
         self.refresh()
 

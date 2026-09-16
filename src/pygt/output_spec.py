@@ -21,6 +21,7 @@ class ExportSpec:
 
 @dataclass
 class SampledOutputSpec:
+    name: str
     fname: str
     index_name: str
     name_map: dict[str, str]

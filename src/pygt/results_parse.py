@@ -94,7 +94,9 @@ class SampledOutputParser(FileParserBase):
         workspace: Workspace,
         caselist: CaseList | ExpandedCaseList,
     ) -> SimulationData:
+        logger.info('Reading data from SampledOutputSpec: "%s"', spec.name)
         data = self._read(spec=spec, workspace=workspace)
+        logger.info("Finished reading data")
         return SimulationData(
             sim_data=data,
             caselist=caselist,
@@ -143,7 +145,9 @@ class ExportedOutputParser(FileParserBase):
         workspace: Workspace,
         caselist: CaseList | ExpandedCaseList,
     ) -> SimulationData:
+        logger.info('Reading data from ExportSpec: "%s"', spec.name)
         data = self._read(spec=spec, workspace=workspace)
+        logger.info("Finished reading data")
         return SimulationData(
             sim_data=data,
             caselist=caselist,

@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import subprocess
@@ -6,7 +5,7 @@ import time
 from functools import wraps
 from pathlib import Path
 
-from .exceptions import FileNotUpdatedError, GTError
+from .exceptions import FileNotUpdatedError
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +47,6 @@ def retry(
                     return f(*args, **kwargs)
                 except exceptions as e:
                     logger.warning("Retry: %s, Retrying in %s seconds...", e, mdelay)
-                    if isinstance(e, GTError):
-                        logger.warning("%s", json.dumps(e.gt_info))
                     time.sleep(mdelay)
                     mtries -= 1
                     mdelay *= backoff

@@ -36,6 +36,7 @@ class DesignWriter:
         workspace: Workspace,
         overwrite: bool = False,
     ):
+        logger.info("Parameter File Creation Requested")
         # Convert caselist to required text for files
         text = self.cases_to_text(caselist)
         metadata_text = self.cases_to_metadata_text(caselist)
@@ -48,10 +49,15 @@ class DesignWriter:
             )
             if not (c1 and c2):
                 raise InconsistentParametersError
+            logger.info(
+                'Not writing parameter file because it already exists and "overwrite"=False'
+            )
             return None
 
         workspace.param_file_path.write_text(text)
+        logger.info("Finished writing parameter file")
         workspace.param_metadata_file_path.write_text(metadata_text)
+        logger.info("Finished writing parameter metadata file")
 
         if (
             workspace.param_file_path.exists()

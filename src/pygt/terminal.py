@@ -1,6 +1,8 @@
 import logging
 import re
 import subprocess
+from pathlib import Path
+from time import perf_counter
 
 from . import exceptions as exc
 
@@ -57,12 +59,25 @@ def validate_gt_outputs(result: subprocess.CompletedProcess):
         )
 
 
-def run_terminal_commands(cmds: list[str]) -> subprocess.CompletedProcess:
-    logger.info("Invoking GT at Terminal")
-    logger.info("Input Commands: %s", cmds)
+def run_terminal_commands(
+    cmds: list[str],
+    stdout: str | Path | None,
+    stderr: str | Path | None,
+) -> subprocess.CompletedProcess:
+    logger.info("Starting subprocess: %s", cmds)
+    start = perf_counter()
     outputs = subprocess.run(cmds, capture_output=True, text=True, shell=True)
-    logger.info("GT call complete")
-    logger.info("stdout: %s", outputs.stdout)
-    logger.info("stderr: %s", outputs.stderr)
+    stop = perf_counter()
+    m, s = divmod(stop - start, 60)
+    logger.info("Subprocess complete")
+    logger.info("Runtime: %d minutes %.3f seconds", m, s)
+    if stdout is not None:
+        stdout = Path(stdout)
+        stdout.write_text(outputs.stdout)
+        logger.debug("Stdout logs written to %s", stdout)
+    if stderr is not None:
+        stderr = Path(stderr)
+        stderr.write_text(outputs.stderr)
+        logger.debug("Stderr logs written to %s", stderr)
     validate_gt_outputs(outputs)
     return outputs

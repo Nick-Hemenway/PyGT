@@ -1,3 +1,4 @@
+import logging
 from enum import StrEnum
 
 import matplotlib.pyplot as plt
@@ -24,6 +25,9 @@ from pygt.workspace import (
     WorkspaceFactory,
     WorkspaceRepository,
 )
+
+plt.set_loglevel("WARNING")
+logging.basicConfig(level=logging.INFO, filename="./logs/qda_align.log")
 
 
 class Columns(StrEnum):
@@ -76,6 +80,7 @@ export_spec = ExportSpec(
     },
 )
 sampled_spec = SampledOutputSpec(
+    name="sampled",
     fname="RLT.trn",
     index_name="count",
     name_map={

@@ -80,8 +80,13 @@ class SerialExecution(ExecutionStrategy):
         # Watch .glx file and make sure it's updated. Otherwise raise exception
         with FileWatcher(workspace.model_path.with_suffix(".glx")):
             start = perf_counter()
-            out = run_terminal_commands(cmds)
+            out = run_terminal_commands(
+                cmds,
+                stdout=workspace.logs_dir / "stdout_serial_run.log",
+                stderr=workspace.logs_dir / "stderr_serial_run.log",
+            )
             stop = perf_counter()
+
         return SerialExecutionResult(
             submit=out,
             runtime_seconds=stop - start,
@@ -89,8 +94,21 @@ class SerialExecution(ExecutionStrategy):
 
     def run(
         self, workspace: Workspace, overwrite: bool = False
-    ) -> SerialExecutionResult:
+    ) -> SerialExecutionResult | None:
+        logger.info("Serial simulation run requested")
+        already_complete = workspace.status in [
+            WorkspaceStatus.COMPLETED,
+            WorkspaceStatus.EXPORTED,
+        ]
         if (workspace.status != WorkspaceStatus.READY) and not overwrite:
+            if already_complete:
+                logger.info(
+                    'Simulation not being run because it is already complete and "overwrite"=False'
+                )
+            else:
+                logger.info(
+                    'Simulation not being run because status is not "ready" and "overwrite"=False'
+                )
             return None
         wrapper = retry(
             exceptions=(GTLicenseError, FileNotUpdatedError),
@@ -101,9 +119,14 @@ class SerialExecution(ExecutionStrategy):
         try:
             out = wrapper(self._run_once)(workspace)
         except Exception as exc:
+            logger.exception(
+                "Simulation was not successful. Check logs at %s for more info",
+                workspace.logs_dir,
+            )
             workspace.mark_failed()
             raise exc
         else:
+            logger.info("Simulation completed in %s", out.runtime)
             workspace.mark_completed()
             return out
 
@@ -114,16 +137,33 @@ def clean_distributed_run(workspace: Workspace) -> CompletedProcess:
         "-localdistrib:delete",
         workspace.model_path,
     ]
-    if workspace.status in [WorkspaceStatus.FAILED, WorkspaceStatus.RUNNING]:
-        out = run_terminal_commands(cmds)
+    logger.info("Distributed run clean invoked for workspace %s", workspace.run_id)
+    needs_clean_status = [WorkspaceStatus.FAILED, WorkspaceStatus.RUNNING]
+    if workspace.status in needs_clean_status:
+        logger.info("Starting deletion of local distributed simulation")
+        out = run_terminal_commands(
+            cmds,
+            stdout=workspace.logs_dir / "stdout_distributed_clean.log",
+            stderr=workspace.logs_dir / "stderr_distributed_clean.log",
+        )
+        logger.info(
+            "Local distributed for workspace %s has been deleted", workspace.run_id
+        )
         workspace.mark_ready()
         return out
+    else:
+        logger.info(
+            "Local distributed for workspace %s not deleted because workspace status not in %s",
+            workspace.run_id,
+            [st.value for st in needs_clean_status],
+        )
 
 
 def clean_all_distributed_runs(repo: WorkspaceRepository) -> list[CompletedProcess]:
     out = []
     for workspace in repo._workspaces.values():
         out.append(clean_distributed_run(workspace))
+    return out
 
 
 @dataclass
@@ -214,9 +254,22 @@ class DistributedExecution(ExecutionStrategy):
 
     def run(
         self, workspace: Workspace, overwrite: bool = False
-    ) -> DistributedExecutionResult:
+    ) -> DistributedExecutionResult | None:
+        logger.info("Distributed simulation run called")
         clean_distributed_run(workspace)
+        already_complete = workspace.status in [
+            WorkspaceStatus.COMPLETED,
+            WorkspaceStatus.EXPORTED,
+        ]
         if (workspace.status != WorkspaceStatus.READY) and not overwrite:
+            if already_complete:
+                logger.info(
+                    'Simulation not being run because it is already complete and "overwrite"=False'
+                )
+            else:
+                logger.info(
+                    'Simulation not being run because status is not "ready" and "overwrite"=False'
+                )
             return None
         wrapper = retry(
             exceptions=(GTLicenseError, FileNotUpdatedError),
@@ -227,16 +280,35 @@ class DistributedExecution(ExecutionStrategy):
         try:
             out = wrapper(self._run_once)(workspace)
         except Exception as exc:
+            logger.exception(
+                "Simulation was not successful. Check logs at %s for more info",
+                workspace.logs_dir,
+            )
             workspace.mark_failed()
             raise exc
         else:
+            logger.info("Simulation completed in: %s", out.runtime)
             workspace.mark_completed()
             return out
 
     def submit(self, workspace: Workspace) -> CompletedProcess:
         cmds = self._build_submit_commands(workspace)
-        return run_terminal_commands(cmds)
+        logger.info("Submitting distributed simulation")
+        out = run_terminal_commands(
+            cmds,
+            stdout=workspace.logs_dir / "stdout_distributed_submit.log",
+            stderr=workspace.logs_dir / "stderr_distributed_submit.log",
+        )
+        logger.info("Distributed simulation submission complete")
+        return out
 
     def fetch(self, workspace: Workspace) -> CompletedProcess:
+        logger.info("Fetching distributed simulation")
         cmds = self._build_fetch_commands(workspace)
-        return run_terminal_commands(cmds)
+        out = run_terminal_commands(
+            cmds,
+            stdout=workspace.logs_dir / "stdout_distributed_fetch.log",
+            stderr=workspace.logs_dir / "stderr_distributed_fetch.log",
+        )
+        logger.info("Distributed simulation results fetch complete")
+        return out

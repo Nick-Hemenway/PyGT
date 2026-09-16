@@ -33,7 +33,13 @@ class DataExporter:
     ) -> CompletedProcess:
         cmds = self._build_commands(workspace, export_spec)
         with FileWatcher(workspace.export_output_path(export_spec)):
-            out = run_terminal_commands(cmds)
+            out = run_terminal_commands(
+                cmds,
+                stdout=workspace.logs_dir
+                / f"stdout_export_spec_{export_spec.name}.log",
+                stderr=workspace.logs_dir
+                / f"stderr_export_spec_{export_spec.name}.log",
+            )
         return out
 
     def export(
@@ -42,7 +48,12 @@ class DataExporter:
         export_spec: ExportSpec,
         overwrite: bool = False,
     ) -> CompletedProcess:
+        logger.info('Export for ExportSpec "%s" called', export_spec.name)
         if (workspace.status != WorkspaceStatus.COMPLETED) and not overwrite:
+            logger.info(
+                'Not invoking gtexport. Workspace status must be "completed" or "overwrite" must be True'
+            )
+            logger.info("Current workspace status: %s", workspace.status)
             return None
 
         wrapper = retry(
@@ -51,6 +62,12 @@ class DataExporter:
             delay=self.delay,
             backoff=self.backoff,
         )
-        out = wrapper(self._export_once)(workspace, export_spec)
-        workspace.mark_exported()
+        try:
+            out = wrapper(self._export_once)(workspace, export_spec)
+        except Exception as e:
+            logger.exception("Exporting of spec %s failed", export_spec.name)
+            raise e
+        else:
+            logger.info("Data successfully exported")
+            workspace.mark_exported()
         return out

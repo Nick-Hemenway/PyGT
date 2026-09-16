@@ -22,7 +22,8 @@ from pygt.workspace import (
     WorkspaceRepository,
 )
 
-logging.basicConfig(level=logging.DEBUG)
+plt.set_loglevel("WARNING")
+logging.basicConfig(level=logging.INFO, filename="./logs/manual_run.log")
 
 
 class Columns(StrEnum):
@@ -57,6 +58,7 @@ export_spec = ExportSpec(
     },
 )
 sampled_spec = SampledOutputSpec(
+    name="sampled",
     fname="Output_v1.trn",
     index_name="count",
     name_map={"Cyc.Angle": "angle", "Kin vel": "vel"},
