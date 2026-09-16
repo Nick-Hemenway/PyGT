@@ -55,9 +55,15 @@ class FileNotUpdatedError(Exception):
 
 
 class MissingSignalError(Exception):
-    def __init__(self, signal: str):
+    def __init__(
+        self,
+        signal: str,
+        design_id: int | None = None,
+        case_id: int | None = None,
+    ):
         self.signal = signal
-        message = f"{signal} not present in CaseData"
+        message = f'Signal "{signal}" is not present in CaseData. '
+        message += f"Design ID: {design_id} Case ID: {case_id}"
         super().__init__(message)
 
 

@@ -48,7 +48,9 @@ class CaseData:
             )
         out = self.signals.get(signal, None)
         if out is None:
-            raise MissingSignalError(signal)
+            raise MissingSignalError(
+                signal, design_id=self.design_id, case_id=self.case_id
+            )
         return out
 
     def __getattr__(self, name: str) -> np.ndarray:
