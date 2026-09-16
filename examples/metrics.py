@@ -269,10 +269,13 @@ m1 = opt.AggregatedMetric(
         op_points_count=op_points.size,
     ),
     arg_map={"cases": "cases"},
-    where=rs.EqualTo(Op.RPM, 1000),
+    # where=rs.IndexedOperatingPoint(index=1), 
+    where=rs.EqualTo(Op.RPM, 2000),
     agg=opt.aggregate.Squeeze()
 )
 
+# TODO: Create function that gets operating point rpms and qda rpm list and returns
+# TODO: index to extract qda results from such that they are correct
 
 
 # f(cases_sampled)
