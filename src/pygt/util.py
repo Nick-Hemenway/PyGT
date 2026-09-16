@@ -6,7 +6,7 @@ import time
 from functools import wraps
 from pathlib import Path
 
-from pygt.exceptions import FileNotUpdatedError, GTError
+from .exceptions import FileNotUpdatedError, GTError
 
 logger = logging.getLogger(__name__)
 

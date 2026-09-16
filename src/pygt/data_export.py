@@ -2,11 +2,11 @@ import logging
 from dataclasses import dataclass
 from subprocess import CompletedProcess
 
-from pygt.exceptions import FileNotUpdatedError, GTLicenseError
-from pygt.output_spec import ExportSpec
-from pygt.terminal import run_terminal_commands
-from pygt.util import FileWatcher, retry
-from pygt.workspace import Workspace, WorkspaceStatus
+from .exceptions import FileNotUpdatedError, GTLicenseError
+from .output_spec import ExportSpec
+from .terminal import run_terminal_commands
+from .util import FileWatcher, retry
+from .workspace import Workspace, WorkspaceStatus
 
 logger = logging.getLogger(__name__)
 

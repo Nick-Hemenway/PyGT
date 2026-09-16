@@ -5,9 +5,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from pygt.cases import CaseList, ExpandedCaseList
-from pygt.exceptions import InconsistentParametersError
-from pygt.workspace import Workspace
+from .cases import CaseList, ExpandedCaseList
+from .exceptions import InconsistentParametersError
+from .workspace import Workspace
 
 logger = logging.getLogger(__name__)
 

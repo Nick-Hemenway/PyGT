@@ -2,7 +2,7 @@ import logging
 import re
 import subprocess
 
-import pygt.exceptions as exc
+from . import exceptions as exc
 
 logger = logging.getLogger(__name__)
 

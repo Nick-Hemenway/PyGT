@@ -5,8 +5,8 @@ from typing import Callable
 import numpy as np
 import optwrap.resolvers as rs
 
-from pygt.exceptions import MissingSignalError
-from pygt.simdata import CaseData
+from .exceptions import MissingSignalError
+from .simdata import CaseData
 
 logger = logging.getLogger(__name__)
 

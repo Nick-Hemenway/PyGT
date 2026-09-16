@@ -4,10 +4,10 @@ from dataclasses import dataclass
 from subprocess import CompletedProcess
 from time import perf_counter
 
-from pygt.exceptions import FileNotUpdatedError, GTLicenseError
-from pygt.terminal import run_terminal_commands
-from pygt.util import FileWatcher, retry
-from pygt.workspace import Workspace, WorkspaceRepository, WorkspaceStatus
+from .exceptions import FileNotUpdatedError, GTLicenseError
+from .terminal import run_terminal_commands
+from .util import FileWatcher, retry
+from .workspace import Workspace, WorkspaceRepository, WorkspaceStatus
 
 logger = logging.getLogger(__name__)
 

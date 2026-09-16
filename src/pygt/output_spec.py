@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from pygt.util import sanitize_path
+from .util import sanitize_path
 
 logger = logging.getLogger(__name__)
 

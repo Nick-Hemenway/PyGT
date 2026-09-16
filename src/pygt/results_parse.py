@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from pygt.cases import CaseList, ExpandedCaseList
-from pygt.output_spec import ExportSpec, SampledOutputSpec
-from pygt.simdata import SimulationData
-from pygt.workspace import Workspace
+from .cases import CaseList, ExpandedCaseList
+from .output_spec import ExportSpec, SampledOutputSpec
+from .simdata import SimulationData
+from .workspace import Workspace
 
 logger = logging.getLogger(__name__)
 

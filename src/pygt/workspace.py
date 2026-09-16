@@ -11,8 +11,8 @@ from pathlib import Path
 from typing import Literal, Protocol
 from uuid import uuid4
 
-from pygt.output_spec import ExportSpec
-from pygt.util import sanitize_path
+from .output_spec import ExportSpec
+from .util import sanitize_path
 
 logger = logging.getLogger(__name__)
 
