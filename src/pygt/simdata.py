@@ -39,7 +39,7 @@ class CaseData:
 
     @cached_property
     def _valid_signals(self):
-        return [sig.value for sig in self.required_signals] + [self.index_name]
+        return [sig for sig in self.required_signals] + [self.index_name]
 
     def get(self, signal: str) -> np.ndarray:
         if signal not in self._valid_signals:
@@ -86,7 +86,7 @@ class CaseData:
             signals = {}
         else:
             signals = {col: df[col].to_numpy().squeeze() for col in df}
-            signals[df.index.name] = df.index.to_numpy()
+            signals[df.index.name] = df.index.to_numpy().squeeze()
 
         # Determine if case is succesful based on presence of all required signals
         mask = (signal in signals for signal in required_signals)
