@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import optwrap as opt
 
-from pygt import metrics  # noqa
 from pygt.cases import CaseList, ExpandedCaseList, build_guard_design
 from pygt.data_export import DataExporter
 from pygt.exceptions import MissingSignalError
