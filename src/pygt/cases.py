@@ -1,8 +1,11 @@
+import logging
 from dataclasses import dataclass
 from functools import cached_property
 
 import numpy as np
 from optwrap import Context, OperatingPoints, Registry
+
+logger = logging.getLogger(__name__)
 
 
 def index_map(cases: int, packet_size: int) -> np.ndarray:

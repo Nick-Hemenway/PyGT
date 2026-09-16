@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from subprocess import CompletedProcess
@@ -7,6 +8,8 @@ from pygt.exceptions import FileNotUpdatedError, GTLicenseError
 from pygt.terminal import run_terminal_commands
 from pygt.util import FileWatcher, retry
 from pygt.workspace import Workspace, WorkspaceRepository, WorkspaceStatus
+
+logger = logging.getLogger(__name__)
 
 
 class ExecutionStrategy(ABC):

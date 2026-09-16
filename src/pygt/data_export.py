@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from subprocess import CompletedProcess
 
@@ -6,6 +7,8 @@ from pygt.output_spec import ExportSpec
 from pygt.terminal import run_terminal_commands
 from pygt.util import FileWatcher, retry
 from pygt.workspace import Workspace, WorkspaceStatus
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass

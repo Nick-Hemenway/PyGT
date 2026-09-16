@@ -1,4 +1,5 @@
 import abc
+import logging
 import re
 from dataclasses import dataclass
 from io import StringIO
@@ -10,6 +11,8 @@ from pygt.cases import CaseList, ExpandedCaseList
 from pygt.output_spec import ExportSpec, SampledOutputSpec
 from pygt.simdata import SimulationData
 from pygt.workspace import Workspace
+
+logger = logging.getLogger(__name__)
 
 
 def flatten_columns(old_cols: pd.MultiIndex, include_units: bool = True) -> list[str]:

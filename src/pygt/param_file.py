@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -7,6 +8,8 @@ import pandas as pd
 from pygt.cases import CaseList, ExpandedCaseList
 from pygt.exceptions import InconsistentParametersError
 from pygt.workspace import Workspace
+
+logger = logging.getLogger(__name__)
 
 
 class DesignWriter:

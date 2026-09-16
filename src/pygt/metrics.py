@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from typing import Callable
 
@@ -6,6 +7,8 @@ import optwrap.resolvers as rs
 
 from pygt.exceptions import MissingSignalError
 from pygt.simdata import CaseData
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass

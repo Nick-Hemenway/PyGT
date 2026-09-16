@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import cached_property
@@ -7,6 +8,8 @@ import pandas as pd
 
 from pygt.cases import CaseList, ExpandedCaseList
 from pygt.exceptions import MissingSignalError
+
+logger = logging.getLogger(__name__)
 
 
 class CaseStatus(StrEnum):

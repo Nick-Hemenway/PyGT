@@ -1,3 +1,4 @@
+import logging
 from typing import Callable
 
 import numpy as np
@@ -5,6 +6,8 @@ from scipy.interpolate import interp1d
 
 from pygt.exceptions import MissingSignalError
 from pygt.simdata import CaseData
+
+logger = logging.getLogger(__name__)
 
 
 class QDAResultsAlign:
