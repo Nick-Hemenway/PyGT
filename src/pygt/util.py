@@ -19,7 +19,12 @@ def sanitize_path(path: Path | str) -> Path:
     return Path(path).resolve()
 
 
-def retry(exceptions, tries=20, delay=5, backoff=2):
+def retry(
+    exceptions: tuple[Exception],
+    tries: int = 20,
+    delay: float = 5,
+    backoff: float = 2,
+):
     """Retry calling the decorated function using an exponential backoff.
 
     Args:
@@ -31,6 +36,8 @@ def retry(exceptions, tries=20, delay=5, backoff=2):
     Returns:
         The decorated function.
     """
+    if not isinstance(exceptions, tuple):
+        raise ValueError('"exceptions" must be a tuple of exceptions')
 
     def deco_retry(f):
         @wraps(f)
@@ -40,9 +47,9 @@ def retry(exceptions, tries=20, delay=5, backoff=2):
                 try:
                     return f(*args, **kwargs)
                 except exceptions as e:
-                    logger.warning(f"Retry: {e}, Retrying in {mdelay} seconds...")
+                    logger.warning("Retry: %s, Retrying in %s seconds...", e, mdelay)
                     if isinstance(e, GTError):
-                        logger.warning(json.dumps(e.gt_info))
+                        logger.warning("%s", json.dumps(e.gt_info))
                     time.sleep(mdelay)
                     mtries -= 1
                     mdelay *= backoff

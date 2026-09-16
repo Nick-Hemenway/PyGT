@@ -59,10 +59,10 @@ def validate_gt_outputs(result: subprocess.CompletedProcess):
 
 def run_terminal_commands(cmds: list[str]) -> subprocess.CompletedProcess:
     logger.info("Invoking GT at Terminal")
-    logger.info(f"Input Commands: {cmds}")
+    logger.info("Input Commands: %s", cmds)
     outputs = subprocess.run(cmds, capture_output=True, text=True, shell=True)
     logger.info("GT call complete")
-    logger.info(f"stdout: {outputs.stdout}")
-    logger.info(f"stderr: {outputs.stderr}")
+    logger.info("stdout: %s", outputs.stdout)
+    logger.info("stderr: %s", outputs.stderr)
     validate_gt_outputs(outputs)
     return outputs
