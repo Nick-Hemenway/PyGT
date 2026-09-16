@@ -56,7 +56,7 @@ class QDAResultsAlign:
             return z / total
 
     def is_wrapped(self, case: CaseData, signal: str) -> bool:
-        return self.center_of_mass(x=case.get(case.index_col), y=case.get(signal)) < 0
+        return self.center_of_mass(x=case.get(case.index_name), y=case.get(signal)) < 0
 
     def wrap_offset(self, case: CaseData, signal: str) -> float:
         # Sometimes the QDA results come out wrapped, such that the main profiles
@@ -80,7 +80,7 @@ class QDAResultsAlign:
     def __call__(self, case: CaseData) -> CaseData:
         signals = {key: np.asarray(val).copy() for key, val in case.signals.items()}
         angle_offset = self.angle_offset(case)
-        x = case.get(case.index_col)
+        x = case.get(case.index_name)
         for sig in self.signal_names(case):
             try:
                 y = case.get(sig)
@@ -98,7 +98,7 @@ class QDAResultsAlign:
             design_id=case.design_id,
             design_variables=case.design_variables,
             operating_point=case.operating_point,
-            index_col=case.index_col,
+            index_name=case.index_name,
             signals=signals,
             status=case.status,
             required_signals=case.required_signals,

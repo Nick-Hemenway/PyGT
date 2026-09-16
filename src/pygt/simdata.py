@@ -32,15 +32,19 @@ class CaseData:
     design_id: int
     design_variables: dict[str, float | int | np.ndarray]
     operating_point: dict[str, float | int | np.ndarray]
-    index_col: str
+    index_name: str
     signals: dict[str, np.ndarray]
     status: CaseStatus
     required_signals: list[str]
 
+    @cached_property
+    def _valid_signals(self):
+        return [sig.value for sig in self.required_signals] + [self.index_name]
+
     def get(self, signal: str) -> np.ndarray:
-        if signal not in (self.required_signals + [self.index_col]):
+        if signal not in self._valid_signals:
             raise ValueError(
-                f"Signal {signal} is not an expected signal. Expected one of {self.required_signals}"
+                f'Signal "{signal}" is not an expected signal. Expected one of {self._valid_signals}'
             )
         out = self.signals.get(signal, None)
         if out is None:
@@ -63,7 +67,7 @@ class CaseData:
 
     @property
     def df(self):
-        return pd.DataFrame(self.signals).set_index(self.index_col)
+        return pd.DataFrame(self.signals).set_index(self.index_name)
 
     @classmethod
     def from_dataframe(
@@ -73,15 +77,14 @@ class CaseData:
         required_signals: list[str],
         design_variables: dict[str, float],
         operating_point: dict[str, float],
+        index_name: str,
         df: pd.DataFrame | None = None,
     ) -> "CaseData":
         if df is None:
             signals = {}
-            index_col = None
         else:
             signals = {col: df[col].to_numpy().squeeze() for col in df}
             signals[df.index.name] = df.index.to_numpy()
-            index_col = df.index.name
 
         # Determine if case is succesful based on presence of all required signals
         mask = (signal in signals for signal in required_signals)
@@ -97,9 +100,9 @@ class CaseData:
             design_id=int(design_id),
             design_variables=design_variables,
             operating_point=operating_point,
-            index_col=index_col,
             signals=signals,
             status=status,
+            index_name=index_name,
             required_signals=required_signals,
         )
 
@@ -130,6 +133,7 @@ class SimulationData:
     sim_data: dict[str, pd.DataFrame]
     caselist: CaseList | ExpandedCaseList
     required_signals: list[str]
+    index_name: str
 
     def __post_init__(self):
         if not isinstance(self.caselist, (CaseList, ExpandedCaseList)):
@@ -151,8 +155,9 @@ class SimulationData:
                     design_id=design_id,
                     design_variables=self._get_design_variables(idx),
                     operating_point=self._get_operating_point(idx),
-                    df=df,
+                    index_name=self.index_name,
                     required_signals=self.required_signals,
+                    df=df,
                 )
             )
         return out

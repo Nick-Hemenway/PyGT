@@ -99,6 +99,7 @@ class SampledOutputParser(FileParserBase):
             sim_data=data,
             caselist=caselist,
             required_signals=list(spec.name_map.values()),
+            index_name=spec.index_name,
         )
 
 
@@ -147,4 +148,5 @@ class ExportedOutputParser(FileParserBase):
             sim_data=data,
             caselist=caselist,
             required_signals=list(spec.name_map.values()),
+            index_name=spec.index_name,
         )
