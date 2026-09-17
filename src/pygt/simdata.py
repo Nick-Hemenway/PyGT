@@ -3,6 +3,7 @@ import logging
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import cached_property
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -223,39 +224,59 @@ class CaseDataResolver(abc.ABC):
 @dataclass
 class Literal(CaseDataResolver):
     value: float
+    func: Callable | None = None
 
     def resolve(self, case: CaseData) -> float:
-        return self.value
+        out = getattr(case, self.name)
+        if self.func is not None:
+            return self.func(out)
+        else:
+            return out
 
 
 @dataclass
 class OpPoint(CaseDataResolver):
     name: str
+    func: Callable | None = None
 
     def resolve(self, case: CaseData) -> float | NDArray:
-        return getattr(case, self.name)
+        out = getattr(case, self.name)
+        if self.func is not None:
+            return self.func(out)
+        else:
+            return out
 
 
 @dataclass
 class DesignVar(CaseDataResolver):
     name: str
+    func: Callable | None = None
 
     def resolve(self, case: CaseData) -> float | NDArray:
-        return getattr(case, self.name)
+        out = getattr(case, self.name)
+        if self.func is not None:
+            return self.func(out)
+        else:
+            return out
 
 
 @dataclass
-class Signal:
+class Signal(CaseDataResolver):
     name: str
     where: SignalFilter | list[SignalFilter] | None = None
+    func: Callable | None = None
 
     def resolve(self, case: CaseData) -> NDArray:
         sig = case.get(self.name)
         mask = build_filter_mask(case, filters=self.where)
         if mask is None:
-            return sig
+            out = sig
         else:
-            return sig[mask]
+            out = sig[mask]
+        if self.func is not None:
+            return self.func(out)
+        else:
+            return out
 
 
 @dataclass
