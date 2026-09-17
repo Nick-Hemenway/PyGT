@@ -52,7 +52,8 @@ class Signals(StrEnum):
     EXH_SPRING_MARGIN = "exh_spring_margin"
     EXH_CONTACT_PRESSURE_IDLE = "exh_contact_pressure_idle"
     EXH_CONTACT_PRESSURE_MAX_SPEED = "exh_contact_pressure_max_speed"
-    
+
+
 class SampledSignals(StrEnum):
     INDEX = "count"
     TORQUE = "torque"
@@ -135,9 +136,11 @@ class Params(StrEnum):
     EXH_F2 = "exh_f2"
     EXH_F3 = "exh_f3"
     EXH_F4 = "exh_f4"
-    
+
+
 class Op(StrEnum):
     RPM = "erpm"
+
 
 reg = opt.Registry()
 
@@ -172,37 +175,47 @@ op_points = opt.OperatingPoints(erpm=[1000, 2000, 3000])
 x0 = reg.pack()
 x1 = np.vstack([x0, 1.01 * x0, 1.02 * x0, 1.03 * x0])
 x1[1, 0] = 160  # Move int_valve_cl to cause wrapping
-ctx = reg.context_physical(x1, operating_points=op_points)
 guard = build_guard_design(reg, op_points)
 
 popsize = op_points.size * x1.shape[0]
 licenses = 3
 packet_size = int(popsize / licenses) + 1
 
-caselist = CaseList(ctx)
-expanded = ExpandedCaseList(
-    caselist=caselist, packet_size=packet_size, guard_design=guard
+
+def simulate(expanded: ExpandedCaseList) -> None:
+    DesignWriter().write_file(caselist=expanded, workspace=workspace)
+    sim = SerialExecution()
+    sim = DistributedExecution(licenses=licenses, packet_size=packet_size)
+    _ = sim.run(workspace)
+    DataExporter().export(workspace=workspace, export_spec=export_spec)
+
+
+reg.add_provider(opt.Provider(name="caselist", func=CaseList))
+reg.add_provider(
+    opt.Provider(
+        name="expanded",
+        func=lambda caselist: ExpandedCaseList(
+            caselist, packet_size=packet_size, guard_design=guard
+        ),
+    )
 )
-
-DesignWriter().write_file(caselist=expanded, workspace=workspace)
-sim = SerialExecution()
-sim = DistributedExecution(licenses=licenses, packet_size=packet_size)
-res = sim.run(workspace)
-DataExporter().export(workspace=workspace, export_spec=export_spec)
-
-
-data = ExportedOutputParser().read(
-    spec=export_spec,
-    workspace=workspace,
-    caselist=expanded,
+reg.add_provider(opt.Provider(name="run_sim", func=simulate))
+reg.add_provider(
+    opt.Provider(
+        name="sim_data",
+        func=lambda expanded, run_sim: ExportedOutputParser().read(
+            spec=export_spec, workspace=workspace, caselist=expanded
+        ),
+    )
 )
-data_sampled = SampledOutputParser().read(
-    spec=sampled_spec,
-    workspace=workspace,
-    caselist=expanded,
+reg.add_provider(
+    opt.Provider(
+        name="sim_data_sampled",
+        func=lambda expanded, run_sim: SampledOutputParser().read(
+            spec=sampled_spec, workspace=workspace, caselist=expanded
+        ),
+    )
 )
-
-
 int_qda_cols = [
     Signals.INT_CONTACT_PRESSURE_IDLE,
     Signals.INT_CONTACT_PRESSURE_MAX_SPEED,
@@ -227,20 +240,16 @@ qda_exh = QDAResultsAlign(
     start_of_cycle_angle=-60,
     signals=exh_qda_cols,
 )
-
-cases = [qda_int(qda_exh(case)) for case in data.case_data]
-cases_sampled = data_sampled.case_data
-
 reg.add_provider(
     opt.Provider(
-        name="cases_sampled",
-        func = lambda: cases_sampled,
+        name="case_data",
+        func=lambda sim_data: [qda_int(qda_exh(case)) for case in sim_data.case_data],
     )
 )
 reg.add_provider(
     opt.Provider(
-        name="cases",
-        func = lambda: cases,
+        name="case_data_sampled",
+        func=lambda sim_data_sampled: sim_data_sampled.case_data,
     )
 )
 
@@ -253,9 +262,9 @@ m = opt.AggregatedMetric(
         },
         op_points_count=op_points.size,
     ),
-    arg_map={"cases": "cases_sampled"},
+    arg_map={"cases": "case_data_sampled"},
     where=rs.Smallest(Op.RPM),
-    agg=opt.aggregate.Squeeze()
+    agg=opt.aggregate.Squeeze(),
 )
 m1 = opt.AggregatedMetric(
     name="int_spring_margin",
@@ -264,20 +273,26 @@ m1 = opt.AggregatedMetric(
         arg_map={
             "index": Signal(Signals.INDEX),
             "signal": Signal(Signals.INT_SPRING_MARGIN),
-            "duration": Params.INT_DURATION
+            "duration": Params.INT_DURATION,
         },
         op_points_count=op_points.size,
     ),
-    arg_map={"cases": "cases"},
-    # where=rs.IndexedOperatingPoint(index=1), 
+    arg_map={"cases": "case_data"},
+    # where=rs.IndexedOperatingPoint(index=1),
     where=rs.EqualTo(Op.RPM, 2000),
-    agg=opt.aggregate.Squeeze()
+    agg=opt.aggregate.Squeeze(),
 )
 
-# TODO: Create function that gets operating point rpms and qda rpm list and returns
-# TODO: index to extract qda results from such that they are correct
+reg.add_metric(m)
+reg.add_metric(m1)
+
+ctx = reg.context_physical(x1, operating_points=op_points)
 
 
-# f(cases_sampled)
-m.evaluate(ctx)
-m1.evaluate(ctx)
+# # TODO: Create function that gets operating point rpms and qda rpm list and returns
+# # TODO: index to extract qda results from such that they are correct
+
+
+# # f(cases_sampled)
+# m.evaluate(ctx)
+# m1.evaluate(ctx)
