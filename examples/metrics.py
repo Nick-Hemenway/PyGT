@@ -16,7 +16,7 @@ from pygt.results_parse import (
     SampledOutputParser,
 )
 from pygt.results_sanitize import QDAResultsAlign
-from pygt.simdata import Signal
+from pygt.simdata import BetweenSymmetric, DesignVar, Signal
 from pygt.simulation import (
     DistributedExecution,
     SerialExecution,
@@ -279,6 +279,24 @@ m1 = opt.AggregatedMetric(
     ),
     arg_map={"cases": "case_data"},
     # where=rs.IndexedOperatingPoint(index=1),
+    where=rs.EqualTo(Op.RPM, 2000),
+    agg=opt.aggregate.Squeeze(),
+)
+
+between_ramps_int = BetweenSymmetric(
+    Signal(Signals.INDEX), duration=DesignVar(Params.INT_DURATION)
+)
+
+m2 = opt.AggregatedMetric(
+    name="int_spring_margin",
+    func=metrics.MultiCaseEvaluator(
+        func=lambda signal: signal.min(),
+        arg_map={
+            "signal": Signal(Signals.INT_SPRING_MARGIN, where=between_ramps_int),
+        },
+        op_points_count=op_points.size,
+    ),
+    arg_map={"cases": "case_data"},
     where=rs.EqualTo(Op.RPM, 2000),
     agg=opt.aggregate.Squeeze(),
 )
