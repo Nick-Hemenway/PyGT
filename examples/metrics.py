@@ -6,6 +6,7 @@ import numpy as np
 import optwrap as opt
 import optwrap.resolvers as rs
 
+import pygt.metrics.cam as cm
 from pygt import metrics
 from pygt.cases import CaseList, ExpandedCaseList, build_guard_design
 from pygt.data_export import DataExporter
@@ -285,10 +286,56 @@ m1 = opt.AggregatedMetric(
     agg=opt.aggregate.Squeeze(),
 )
 
+m2 = opt.AggregatedMetric(
+    name="int_contact_pressure",
+    func=metrics.MultiCaseEvaluator(
+        func=metrics.signal_max,
+        arg_map={
+            "signal": Signal(
+                Signals.INT_CONTACT_PRESSURE_IDLE, where=between_ramps_int
+            ),
+        },
+        op_points_count=op_points.size,
+    ),
+    arg_map={"cases": "case_data"},
+    where=rs.EqualTo(Op.RPM, 2000),
+    agg=opt.aggregate.Squeeze(),
+)
+
+reg.add_provider(
+    opt.Provider(
+        name="impulse_width",
+        func=metrics.MultiCaseEvaluator(
+            func=cm.impulse_width,
+            arg_map={
+                "theta1": Params.INT_THETA1,
+                "theta2": Params.INT_THETA2,
+                "theta3": Params.INT_THETA3,
+                "theta4": Params.INT_THETA4,
+            },
+            op_points_count=op_points.size,
+        ),
+        arg_map={"cases": "case_data"},
+    )
+)
+
+m3 = opt.AggregatedMetric(
+    name="stability",
+    func=lambda impulse_width: cm.stability(
+        impulse_width=impulse_width, natural_freq_hz=1000, max_rpm=6600
+    ),
+    where=rs.FirstOperatingPoint(),
+    agg=opt.aggregate.Squeeze(),
+)
+
+
 reg.add_metric(m)
 reg.add_metric(m1)
+reg.add_metric(m2)
 
 ctx = reg.context_physical(x1, operating_points=op_points)
+
+print(ctx.int_contact_pressure)
 
 
 # # TODO: Create function that gets operating point rpms and qda rpm list and returns

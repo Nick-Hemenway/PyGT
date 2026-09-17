@@ -4,6 +4,7 @@ from typing import Callable
 
 import numpy as np
 from numpy.typing import NDArray
+from optwrap.resolvers import AttributePathResolver
 
 from .simdata import CaseData
 
@@ -29,9 +30,84 @@ def build_filter_mask(
     return mask
 
 
+type Resolvable = "CaseDataResolver" | int | float | str
+
+
 class CaseDataResolver(abc.ABC):
     @abc.abstractmethod
     def resolve(self, case: CaseData) -> float | NDArray: ...
+
+    def __neg__(self):
+        return self.__mul__(-1)
+
+    def __pos__(self):
+        return self.__mul__(1)
+
+    def __add__(self, other: Resolvable) -> "BinaryCaseDataResolver":
+        return BinaryCaseDataResolver(
+            left=self, right=other, func=lambda a, b: a + b, op="+"
+        )
+
+    def __radd__(self, other: Resolvable) -> "BinaryCaseDataResolver":
+        return self.__add__(other)
+
+    def __sub__(self, other: Resolvable) -> "BinaryCaseDataResolver":
+        return BinaryCaseDataResolver(
+            left=self, right=other, func=lambda a, b: a - b, op="-"
+        )
+
+    def __rsub__(self, other: Resolvable) -> "BinaryCaseDataResolver":
+        return BinaryCaseDataResolver(
+            left=other, right=self, func=lambda a, b: a - b, op="-"
+        )
+
+    def __mul__(self, other: Resolvable) -> "BinaryCaseDataResolver":
+        return BinaryCaseDataResolver(
+            left=self, right=other, func=lambda a, b: a * b, op="*"
+        )
+
+    def __rmul__(self, other: Resolvable) -> "BinaryCaseDataResolver":
+        return self.__mul__(other)
+
+    def __truediv__(self, other: Resolvable) -> "BinaryCaseDataResolver":
+        return BinaryCaseDataResolver(
+            left=self, right=other, func=lambda a, b: a / b, op="/"
+        )
+
+    def __rtruediv__(self, other: Resolvable) -> "BinaryCaseDataResolver":
+        return BinaryCaseDataResolver(
+            left=other, right=self, func=lambda a, b: a / b, op="/"
+        )
+
+    def __mod__(self, other: Resolvable) -> "BinaryCaseDataResolver":
+        return BinaryCaseDataResolver(
+            left=self, right=other, func=lambda a, b: a % b, op="%"
+        )
+
+    def __rmod__(self, other: Resolvable) -> "BinaryCaseDataResolver":
+        return BinaryCaseDataResolver(
+            left=other, right=self, func=lambda a, b: a % b, op="%"
+        )
+
+    def __floordiv__(self, other: Resolvable) -> "BinaryCaseDataResolver":
+        return BinaryCaseDataResolver(
+            left=self, right=other, func=lambda a, b: a // b, op="//"
+        )
+
+    def __rfloordiv__(self, other: Resolvable) -> "BinaryCaseDataResolver":
+        return BinaryCaseDataResolver(
+            left=other, right=self, func=lambda a, b: a // b, op="//"
+        )
+
+    def __pow__(self, other: Resolvable) -> "BinaryCaseDataResolver":
+        return BinaryCaseDataResolver(
+            left=self, right=other, func=lambda a, b: a**b, op="**"
+        )
+
+    def __rpow__(self, other: Resolvable) -> "BinaryCaseDataResolver":
+        return BinaryCaseDataResolver(
+            left=other, right=self, func=lambda a, b: a**b, op="**"
+        )
 
 
 @dataclass
@@ -40,7 +116,7 @@ class Literal(CaseDataResolver):
     func: Callable | None = None
 
     def resolve(self, case: CaseData) -> float:
-        out = getattr(case, self.name)
+        out = self.value
         if self.func is not None:
             return self.func(out)
         else:
@@ -90,6 +166,32 @@ class Signal(CaseDataResolver):
             return self.func(out)
         else:
             return out
+
+
+def as_resolver(resolver: Resolvable) -> CaseDataResolver:
+    if isinstance(resolver, CaseDataResolver):
+        return resolver
+    elif isinstance(resolver, str):
+        return AttributePathResolver(resolver)
+    else:
+        return Literal(resolver)
+
+
+class BinaryCaseDataResolver(CaseDataResolver):
+    def __init__(
+        self,
+        left: CaseDataResolver,
+        right: CaseDataResolver,
+        func: Callable,
+        op: str,
+    ):
+        self.left = as_resolver(left)
+        self.right = as_resolver(right)
+        self.func = func
+        self.op = op
+
+    def resolve(self, case: CaseData) -> float | NDArray:
+        return self.func(self.left.resolve(case), self.right.resolve(case))
 
 
 @dataclass
