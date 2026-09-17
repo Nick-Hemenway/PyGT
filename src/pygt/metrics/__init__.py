@@ -1,5 +1,6 @@
 from .generic import (
-    SignalAggregate,
+    signal_max,
+    signal_min,
 )
 from .util import (
     MultiCaseEvaluator,
@@ -7,5 +8,6 @@ from .util import (
 
 __all__ = [
     MultiCaseEvaluator,
-    SignalAggregate,
+    signal_max,
+    signal_min,
 ]

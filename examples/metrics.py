@@ -11,12 +11,12 @@ from pygt.cases import CaseList, ExpandedCaseList, build_guard_design
 from pygt.data_export import DataExporter
 from pygt.output_spec import ExportSpec, SampledOutputSpec
 from pygt.param_file import DesignWriter  # noqa
+from pygt.resolvers import BetweenSymmetric, DesignVar, Signal
 from pygt.results_parse import (
     ExportedOutputParser,
     SampledOutputParser,
 )
 from pygt.results_sanitize import QDAResultsAlign
-from pygt.simdata import BetweenSymmetric, DesignVar, Signal
 from pygt.simulation import (
     DistributedExecution,
     SerialExecution,
@@ -266,31 +266,15 @@ m = opt.AggregatedMetric(
     where=rs.Smallest(Op.RPM),
     agg=opt.aggregate.Squeeze(),
 )
-m1 = opt.AggregatedMetric(
-    name="int_spring_margin",
-    func=metrics.MultiCaseEvaluator(
-        func=metrics.SignalAggregate(kind="min"),
-        arg_map={
-            "index": Signal(Signals.INDEX),
-            "signal": Signal(Signals.INT_SPRING_MARGIN),
-            "duration": Params.INT_DURATION,
-        },
-        op_points_count=op_points.size,
-    ),
-    arg_map={"cases": "case_data"},
-    # where=rs.IndexedOperatingPoint(index=1),
-    where=rs.EqualTo(Op.RPM, 2000),
-    agg=opt.aggregate.Squeeze(),
-)
 
 between_ramps_int = BetweenSymmetric(
     Signal(Signals.INDEX), duration=DesignVar(Params.INT_DURATION)
 )
 
-m2 = opt.AggregatedMetric(
+m1 = opt.AggregatedMetric(
     name="int_spring_margin",
     func=metrics.MultiCaseEvaluator(
-        func=lambda signal: signal.min(),
+        func=metrics.signal_min,
         arg_map={
             "signal": Signal(Signals.INT_SPRING_MARGIN, where=between_ramps_int),
         },
