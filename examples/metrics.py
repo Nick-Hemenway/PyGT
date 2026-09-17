@@ -328,6 +328,13 @@ m3 = opt.AggregatedMetric(
     agg=opt.aggregate.Squeeze(),
 )
 
+DV = DesignVar
+theta6_int_case_resolver = DV(Params.INT_DURATION) / 2 - (
+    DV(Params.INT_THETA1)
+    + DV(Params.INT_THETA2)
+    + DV(Params.INT_THETA3)
+    + DV(Params.INT_THETA4)
+)
 
 reg.add_metric(m)
 reg.add_metric(m1)
@@ -336,6 +343,9 @@ reg.add_metric(m2)
 ctx = reg.context_physical(x1, operating_points=op_points)
 
 print(ctx.int_contact_pressure)
+case = ctx.case_data[0]
+
+print("\ntheta6 resolved:", theta6_int_case_resolver.resolve(case))
 
 
 # # TODO: Create function that gets operating point rpms and qda rpm list and returns
