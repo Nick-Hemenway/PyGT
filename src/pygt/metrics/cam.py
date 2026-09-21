@@ -18,12 +18,12 @@ def stability(impulse_width: float, natural_freq_hz: float, max_rpm: float) -> f
 
 
 def lubrication_number(
-    angle: NDArray, entrainment_vel: NDArray, theta6: float
+    angle: NDArray, entrainment_velocity: NDArray, theta6: float
 ) -> float:
     angle = np.asarray(angle)
-    entrainment_vel = np.asarray(entrainment_vel)
+    entrainment_velocity = np.asarray(entrainment_velocity)
     mask = (angle > -theta6) & (angle < theta6)
-    return 2 * np.abs(entrainment_vel[mask]).min()
+    return 2 * np.abs(entrainment_velocity[mask]).min()
 
 
 def lift_area(angle: NDArray, lift: NDArray, ramp_height: float) -> float:
@@ -50,6 +50,30 @@ def min_negative_radius_of_curvature(
         return no_negative_val
     else:
         return np.abs(valid).min()
+
+
+def _first_lube_node_location(
+    angle: NDArray, entrainment_velocity: NDArray
+) -> tuple[float, CubicSpline]:
+    first_half_mask = angle < 0
+    vel_func = CubicSpline(
+        x=angle[first_half_mask], y=entrainment_velocity[first_half_mask]
+    )
+    try:
+        result = root_scalar(vel_func, bracket=[angle.min(), 0])
+    except ValueError:
+        logger.exception(
+            "Root solve for first lube node location was not successful -- returning None"
+        )
+        # we will assume that if root finding fails, e.g. case when we get
+        # "f(a) and f(b) must have different signs" error, that the profile is
+        # probably not well behaved anyway, so we'll return None assuming the
+        # profile is bad
+        return None
+    if not result.converged:
+        logger.warning("First lube node root solve did not converge -- returning None")
+        return None
+    return result.root, vel_func
 
 
 def first_lube_node_inclination(angle: NDArray, entrainment_velocity: NDArray) -> float:
@@ -81,97 +105,30 @@ def first_lube_node_inclination(angle: NDArray, entrainment_velocity: NDArray) -
     """
     angle = np.asarray(angle)
     entrainment_velocity = np.asarray(entrainment_velocity)
-    first_half_mask = angle < 0
-    vel_func = CubicSpline(
-        x=angle[first_half_mask], y=entrainment_velocity[first_half_mask]
-    )
-    try:
-        result = root_scalar(vel_func, bracket=[angle.min(), 0])
-    except ValueError:
-        logger.exception(
-            "Root solve in first_lube_node_inclination not successful -- returning None"
-        )
-        # we will assume that if root finding fails, e.g. case when we get
-        # "f(a) and f(b) must have different signs" error, that the profile is
-        # probably not well behaved anyway, so we'll return None assuming the
-        # profile is bad
+    node_angle, vel_func = _first_lube_node_location(angle, entrainment_velocity)
+    if node_angle is None:
         return None
-    if not result.converged:
-        logger.warning(
-            "first_lubrication_node_inclination root solve did not converge -- returning None"
-        )
-        return None
-
-    slope = vel_func(result.root, nu=1)
+    slope = vel_func(node_angle, nu=1)  # Evaluate first derivative
     deg_to_rad = 180 / np.pi
     cam_to_crank_deg = 2
     # mm/deg/crank-rad
     return np.abs(slope) * deg_to_rad * cam_to_crank_deg
 
 
-# class FirstLubricationNodeContactPressure(AbstractMetric):
-#     def __init__(
-#         self,
-#         column_velocity: str,
-#         column_pressure: str,
-#         duration_param: str,
-#         name: Optional[str] = None,
-#         label: Optional[str] = None,
-#     ):
-#         self.column_velocity = column_velocity
-#         self.column_pressure = column_pressure
-#         self.name = name
-#         self.label = label
-#         self.duration_param = duration_param
+def first_lube_node_contact_pressure(
+    angle: NDArray, entrainment_velocity: NDArray, pressure: NDArray
+) -> float:
+    # Sanitize inputs
+    angle = np.asarray(angle)
+    entrainment_velocity = np.asarray(entrainment_velocity)
+    pressure = np.asarray(pressure)
 
-#     def __call__(
-#         self, sim_data: Union[pd.DataFrame, None], params: dict[str, float]
-#     ) -> float:
-#         if sim_data is None:
-#             return None
+    # Find location of first lube node
+    node_angle, _ = _first_lube_node_location(angle, entrainment_velocity)
 
-#         try:
-#             velocity = sim_data[self.column_velocity]
-#         except KeyError:
-#             logger.warning(
-#                 f'FirstLubricationNodeContactPressure: Column "{self.column_velocity}" is not in dataframe'
-#             )
-#             return None
-
-#         duration = params[self.duration_param]
-#         first_half = velocity.loc[-duration / 2 : 0]
-
-#         # solve for when entrainment velocity (relative velocity) goes to zero
-#         velocity = CubicSpline(x=first_half.index, y=first_half.to_numpy())
-#         try:
-#             result = root_scalar(velocity, bracket=[-duration / 2, 0])
-#         except ValueError:
-#             logger.exception(
-#                 "Root solve in FirstLubricationNodeContactPressure not succesful -- returning None"
-#             )
-#             # we will assume that if root finding fails, e.g. case when we get
-#             # "f(a) and f(b) must have different signs" error, that the profile is
-#             # probably not well behaved anyway, so we'll return None assuming the
-#             # profile is bad
-#             return None
-
-#         if not result.converged:
-#             logger.error("Lubrication node did not converge properly -- returning None")
-#             return None
-
-#         node_angle = result.root
-
-#         try:
-#             pressure = sim_data[self.column_pressure]
-#         except KeyError:
-#             logger.warning(
-#                 f'FirstLubricationNodeContactPressure: Column "{self.column_pressure}" is not in dataframe'
-#             )
-#             return None
-
-#         # evaluate pressure at location where velocity goes to zero
-#         pressure_continuous = CubicSpline(pressure.index, pressure.to_numpy())
-#         return pressure_continuous(node_angle)
+    # Evaluate pressure at first lube node
+    pressure_func = CubicSpline(angle, pressure)
+    return pressure_func(node_angle)
 
 
 # class CamTorqueMetrics(AbstractMetric):

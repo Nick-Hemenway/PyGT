@@ -297,7 +297,7 @@ m4 = opt.Metric(
         func=cm.lubrication_number,
         case_arg_map={
             "angle": Signal(Signals.INDEX),
-            "entrainment_vel": Signal(Signals.INT_ENTRAINMENT_VELOCITY),
+            "entrainment_velocity": Signal(Signals.INT_ENTRAINMENT_VELOCITY),
         },
         context_arg_map={"theta6": "theta6"},
         op_points_count=op_points.size,
