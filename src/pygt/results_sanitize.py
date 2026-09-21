@@ -80,7 +80,19 @@ class QDAResultsAlign:
     def __call__(self, case: CaseData) -> CaseData:
         signals = {key: np.asarray(val).copy() for key, val in case.signals.items()}
         angle_offset = self.angle_offset(case)
-        x = case.get(case.index_name)
+        try:
+            x = case.get(case.index_name)
+        except MissingSignalError:
+            # The whole case must have failed for the index to not be present
+            # We'll just return the original CaseData object directly and log a warning
+            logger.warning(
+                (
+                    "Case does not have index signal present "
+                    "and thus QDA alignment cannot be performed. "
+                )
+            )
+            logger.warning("Case Status: %s", case.status)
+            return case
         for sig in self.signal_names(case):
             try:
                 y = case.get(sig)

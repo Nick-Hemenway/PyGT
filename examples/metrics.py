@@ -1,10 +1,17 @@
 import logging
-from enum import StrEnum
 
 import matplotlib.pyplot as plt
 import numpy as np
 import optwrap as opt
 import optwrap.resolvers as rs
+from gt_vars import (
+    Op,
+    SampledSignals,
+    Signals,
+    Vars,
+    export_signal_map,
+    sampled_signal_map,
+)
 
 import pygt.metrics.cam as cm
 from pygt import metrics
@@ -32,36 +39,6 @@ from pygt.workspace import (
 plt.set_loglevel("WARNING")
 logging.basicConfig(level=logging.INFO, filename="./logs/metrics.log")
 
-
-class Signals(StrEnum):
-    INDEX = "angle"
-    INT_LIFT = "int_lift"
-    INT_VELOCITY = "int_vel"
-    INT_ACCEL = "int_accel"
-    INT_JERK = "int_jerk"
-    INT_ROC = "int_roc_knife"
-    INT_ROC_EFF = "int_roc_effective"
-    INT_SPRING_MARGIN = "int_spring_margin"
-    INT_CONTACT_PRESSURE_IDLE = "int_contact_pressure_idle"
-    INT_CONTACT_PRESSURE_MAX_SPEED = "int_contact_pressure_max_speed"
-    EXH_LIFT = "exh_lift"
-    EXH_VELOCITY = "exh_vel"
-    EXH_ACCEL = "exh_accel"
-    EXH_JERK = "exh_jerk"
-    EXH_ROC = "exh_roc_knife"
-    EXH_ROC_EFF = "exh_roc_effective"
-    EXH_SPRING_MARGIN = "exh_spring_margin"
-    EXH_CONTACT_PRESSURE_IDLE = "exh_contact_pressure_idle"
-    EXH_CONTACT_PRESSURE_MAX_SPEED = "exh_contact_pressure_max_speed"
-
-
-class SampledSignals(StrEnum):
-    INDEX = "count"
-    TORQUE = "torque"
-    POWER = "power"
-    OVERLAP = "overlap"
-
-
 plt.style.use("bmh")
 
 export_spec = ExportSpec(
@@ -69,36 +46,13 @@ export_spec = ExportSpec(
     config_source="./gt_files/export_configuration_integrated.exp",
     output_filename="exported.txt",
     index_name=Signals.INDEX,
-    name_map={
-        "Int_Lift": Signals.INT_LIFT,
-        "Int_Velocity": Signals.INT_VELOCITY,
-        "Int_Acceleration": Signals.INT_ACCEL,
-        "Int_Jerk": Signals.INT_JERK,
-        "Int_RoC (Knife Edge)": Signals.INT_ROC,
-        "Int_RoC Effective": Signals.INT_ROC_EFF,
-        "Int_Spring Margin @6000rpm": Signals.INT_SPRING_MARGIN,
-        "Int_Contact Pressure @650rpm": Signals.INT_CONTACT_PRESSURE_IDLE,
-        "Int_Contact Pressure @6000rpm": Signals.INT_CONTACT_PRESSURE_MAX_SPEED,
-        "Exh_Lift": Signals.EXH_LIFT,
-        "Exh_Velocity": Signals.EXH_VELOCITY,
-        "Exh_Acceleration": Signals.EXH_ACCEL,
-        "Exh_Jerk": Signals.EXH_JERK,
-        "Exh_RoC (Knife Edge)": Signals.EXH_ROC,
-        "Exh_RoC Effective": Signals.EXH_ROC_EFF,
-        "Exh_Spring Margin @6000rpm": Signals.EXH_SPRING_MARGIN,
-        "Exh_Contact Pressure @650rpm": Signals.EXH_CONTACT_PRESSURE_IDLE,
-        "Exh_Contact Pressure @6000rpm": Signals.EXH_CONTACT_PRESSURE_MAX_SPEED,
-    },
+    name_map=export_signal_map,
 )
 sampled_spec = SampledOutputSpec(
     name="sampled",
     fname="RLT.trn",
     index_name=SampledSignals.INDEX,
-    name_map={
-        "Brake_Torque": SampledSignals.TORQUE,
-        "Brake_Power": SampledSignals.POWER,
-        "Overlap_Factor": SampledSignals.OVERLAP,
-    },
+    name_map=sampled_signal_map,
 )
 
 root = "./runs/runs_integrated"
@@ -112,66 +66,33 @@ workspace = repo.latest()
 clean_all_distributed_runs(repo)
 
 
-class Params(StrEnum):
-    INT_VALVE_CL = "VALVE_CL_INT"
-    INT_LIFT_MAX = "int_lift_max"
-    INT_DURATION = "int_duration"
-    INT_THETA1 = "int_theta1"
-    INT_THETA2 = "int_theta2"
-    INT_THETA3 = "int_theta3"
-    INT_THETA4 = "int_theta4"
-    INT_THETA5 = "int_theta5"
-    INT_F1 = "int_f1"
-    INT_F2 = "int_f2"
-    INT_F3 = "int_f3"
-    INT_F4 = "int_f4"
-    EXH_VALVE_CL = "VALVE_CL_EXH"
-    EXH_LIFT_MAX = "exh_lift_max"
-    EXH_DURATION = "exh_duration"
-    EXH_THETA1 = "exh_theta1"
-    EXH_THETA2 = "exh_theta2"
-    EXH_THETA3 = "exh_theta3"
-    EXH_THETA4 = "exh_theta4"
-    EXH_THETA5 = "exh_theta5"
-    EXH_F1 = "exh_f1"
-    EXH_F2 = "exh_f2"
-    EXH_F3 = "exh_f3"
-    EXH_F4 = "exh_f4"
-
-
-class Op(StrEnum):
-    RPM = "erpm"
-
-
 reg = opt.Registry()
 
-reg.add(Params.INT_VALVE_CL, lower=85, upper=130, default=114)
-reg.add(Params.INT_LIFT_MAX, lower=85, upper=130, default=13.31)
-reg.add(Params.INT_DURATION, lower=85, upper=130, default=118)
-reg.add(Params.INT_THETA1, lower=0, upper=20, default=1.5)
-reg.add(Params.INT_THETA2, lower=0, upper=15, default=9.3)
-reg.add(Params.INT_THETA3, lower=0, upper=20, default=11.9)
-reg.add(Params.INT_THETA4, lower=0, upper=20, default=1)
-reg.add(Params.INT_THETA5, lower=0, upper=20, default=6.6)
-reg.add(Params.INT_F1, lower=0, upper=4, default=1.130)
-reg.add(Params.INT_F2, lower=0, upper=4, default=1.503)
-reg.add(Params.INT_F3, lower=0, upper=4, default=1.140)
-reg.add(Params.INT_F4, lower=0, upper=4, default=1.916)
-reg.add(Params.EXH_VALVE_CL, lower=85, upper=130, default=120)
-reg.add(Params.EXH_LIFT_MAX, lower=85, upper=130, default=13.49)
-reg.add(Params.EXH_DURATION, lower=85, upper=130, default=142)
-reg.add(Params.EXH_THETA1, lower=0, upper=20, default=1.5)
-reg.add(Params.EXH_THETA2, lower=0, upper=15, default=9.3)
-reg.add(Params.EXH_THETA3, lower=0, upper=20, default=11.9)
-reg.add(Params.EXH_THETA4, lower=0, upper=20, default=1)
-reg.add(Params.EXH_THETA5, lower=0, upper=20, default=6.6)
-reg.add(Params.EXH_F1, lower=0, upper=4, default=1.130)
-reg.add(Params.EXH_F2, lower=0, upper=4, default=1.503)
-reg.add(Params.EXH_F3, lower=0, upper=4, default=1.140)
-reg.add(Params.EXH_F4, lower=0, upper=4, default=1.916)
-reg.add_operating_point_param("erpm")
+reg.add(Vars.INT_VALVE_CL, lower=85, upper=130, default=113)
+reg.add(Vars.INT_LIFT_MAX, lower=85, upper=130, default=10)
+reg.add(Vars.INT_DURATION, lower=85, upper=130, default=130)
+reg.add(Vars.INT_THETA1, lower=0, upper=20, default=8)
+reg.add(Vars.INT_THETA2, lower=0, upper=15, default=8)
+reg.add(Vars.INT_THETA3, lower=0, upper=20, default=8)
+reg.add(Vars.INT_THETA4, lower=0, upper=20, default=8)
+reg.add(Vars.INT_THETA5, lower=0, upper=20, default=8)
+reg.add(Vars.INT_F1, lower=0, upper=4, default=1.130)
+reg.add(Vars.INT_F3, lower=0, upper=4, default=1.140)
+reg.add(Vars.INT_F4, lower=0, upper=4, default=1.916)
+reg.add(Vars.EXH_VALVE_CL, lower=85, upper=130, default=110)
+reg.add(Vars.EXH_LIFT_MAX, lower=85, upper=130, default=10)
+reg.add(Vars.EXH_DURATION, lower=85, upper=130, default=130)
+reg.add(Vars.EXH_THETA1, lower=0, upper=20, default=8)
+reg.add(Vars.EXH_THETA2, lower=0, upper=15, default=8)
+reg.add(Vars.EXH_THETA3, lower=0, upper=20, default=8)
+reg.add(Vars.EXH_THETA4, lower=0, upper=20, default=8)
+reg.add(Vars.EXH_THETA5, lower=0, upper=20, default=8)
+reg.add(Vars.EXH_F1, lower=0, upper=4, default=1.130)
+reg.add(Vars.EXH_F3, lower=0, upper=4, default=1.140)
+reg.add(Vars.EXH_F4, lower=0, upper=4, default=1.916)
+reg.add_operating_point_param(Op.RPM)
 
-op_points = opt.OperatingPoints(erpm=[1000, 2000, 3000])
+op_points = opt.OperatingPoints(**{Op.RPM: [1000, 2000, 3000]})
 
 x0 = reg.pack()
 x1 = np.vstack([x0, 1.01 * x0, 1.02 * x0, 1.03 * x0])
@@ -217,26 +138,17 @@ reg.add_provider(
         ),
     )
 )
-int_qda_cols = [
-    Signals.INT_CONTACT_PRESSURE_IDLE,
-    Signals.INT_CONTACT_PRESSURE_MAX_SPEED,
-    Signals.INT_SPRING_MARGIN,
-]
-
-exh_qda_cols = [
-    Signals.EXH_CONTACT_PRESSURE_IDLE,
-    Signals.EXH_CONTACT_PRESSURE_MAX_SPEED,
-    Signals.EXH_SPRING_MARGIN,
-]
+int_qda_cols = [sig for sig in Signals if "qda_int" in sig]
+exh_qda_cols = [sig for sig in Signals if "qda_exh" in sig]
 
 qda_int = QDAResultsAlign(
-    timing_param=Params.INT_VALVE_CL,
+    timing_param=Vars.INT_VALVE_CL,
     intake=True,
     start_of_cycle_angle=-60,
     signals=int_qda_cols,
 )
 qda_exh = QDAResultsAlign(
-    timing_param=Params.EXH_VALVE_CL,
+    timing_param=Vars.EXH_VALVE_CL,
     intake=False,
     start_of_cycle_angle=-60,
     signals=exh_qda_cols,
@@ -269,7 +181,7 @@ m = opt.AggregatedMetric(
 )
 
 between_ramps_int = BetweenSymmetric(
-    Signal(Signals.INDEX), duration=DesignVar(Params.INT_DURATION)
+    Signal(Signals.INDEX), duration=DesignVar(Vars.INT_DURATION)
 )
 reg.add_metric(m)
 
@@ -278,7 +190,7 @@ m1 = opt.AggregatedMetric(
     func=metrics.MultiCaseEvaluator(
         func=metrics.signal_min,
         case_arg_map={
-            "signal": Signal(Signals.INT_SPRING_MARGIN, where=between_ramps_int),
+            "signal": Signal(Signals.QDA_INT_SPRING_MARGIN, where=between_ramps_int),
         },
         op_points_count=op_points.size,
     ),
@@ -293,7 +205,7 @@ m2 = opt.AggregatedMetric(
         func=metrics.signal_max,
         case_arg_map={
             "signal": Signal(
-                Signals.INT_CONTACT_PRESSURE_IDLE, where=between_ramps_int
+                Signals.QDA_INT_CONTACT_PRESSURE_IDLE, where=between_ramps_int
             ),
         },
         op_points_count=op_points.size,
@@ -309,10 +221,10 @@ reg.add_provider(
         func=metrics.MultiCaseEvaluator(
             func=cm.impulse_width,
             case_arg_map={
-                "theta1": Params.INT_THETA1,
-                "theta2": Params.INT_THETA2,
-                "theta3": Params.INT_THETA3,
-                "theta4": Params.INT_THETA4,
+                "theta1": Vars.INT_THETA1,
+                "theta2": Vars.INT_THETA2,
+                "theta3": Vars.INT_THETA3,
+                "theta4": Vars.INT_THETA4,
             },
             op_points_count=op_points.size,
         ),
@@ -336,12 +248,12 @@ reg.add_provider(
             duration / 2 - (t1 + t2 + t3 + t4 + t5)
         ).flatten(),
         arg_map={
-            "t1": Params.INT_THETA1,
-            "t2": Params.INT_THETA2,
-            "t3": Params.INT_THETA3,
-            "t4": Params.INT_THETA4,
-            "t5": Params.INT_THETA5,
-            "duration": Params.INT_DURATION,
+            "t1": Vars.INT_THETA1,
+            "t2": Vars.INT_THETA2,
+            "t3": Vars.INT_THETA3,
+            "t4": Vars.INT_THETA4,
+            "t5": Vars.INT_THETA5,
+            "duration": Vars.INT_DURATION,
         },
     )
 )
@@ -353,12 +265,12 @@ reg.add_metric(
             duration / 2 - (t1 + t2 + t3 + t4 + t5)
         ),
         arg_map={
-            "t1": Params.INT_THETA1,
-            "t2": Params.INT_THETA2,
-            "t3": Params.INT_THETA3,
-            "t4": Params.INT_THETA4,
-            "t5": Params.INT_THETA5,
-            "duration": Params.INT_DURATION,
+            "t1": Vars.INT_THETA1,
+            "t2": Vars.INT_THETA2,
+            "t3": Vars.INT_THETA3,
+            "t4": Vars.INT_THETA4,
+            "t5": Vars.INT_THETA5,
+            "duration": Vars.INT_DURATION,
         },
         agg=opt.aggregate.Squeeze(),
         where=opt.resolvers.FirstOperatingPoint(),
@@ -366,12 +278,12 @@ reg.add_metric(
 )
 
 DV = DesignVar
-theta6_int_case_resolver = DV(Params.INT_DURATION) / 2 - (
-    DV(Params.INT_THETA1)
-    + DV(Params.INT_THETA2)
-    + DV(Params.INT_THETA3)
-    + DV(Params.INT_THETA4)
-    + DV(Params.INT_THETA5)
+theta6_int_case_resolver = DV(Vars.INT_DURATION) / 2 - (
+    DV(Vars.INT_THETA1)
+    + DV(Vars.INT_THETA2)
+    + DV(Vars.INT_THETA3)
+    + DV(Vars.INT_THETA4)
+    + DV(Vars.INT_THETA5)
 )
 
 reg.add_metric(m1)
@@ -385,7 +297,7 @@ m4 = opt.Metric(
         func=cm.lubrication_number,
         case_arg_map={
             "angle": Signal(Signals.INDEX),
-            "entrainment_vel": Signal(Signals.INT_LIFT),
+            "entrainment_vel": Signal(Signals.INT_ENTRAINMENT_VELOCITY),
         },
         context_arg_map={"theta6": "theta6"},
         op_points_count=op_points.size,
@@ -396,16 +308,16 @@ m4 = opt.Metric(
 
 ctx = reg.context_physical(x1, operating_points=op_points)
 
-# print(ctx.int_contact_pressure)
-# case = ctx.case_data[0]
+print(ctx.int_contact_pressure)
 
-# print("\ntheta6 resolved:", theta6_int_case_resolver.resolve(case))
+print(m.evaluate(ctx))
+print(m1.evaluate(ctx))
+print(m2.evaluate(ctx))
+print(m3.evaluate(ctx))
+print(m4.evaluate(ctx))
+
+print("\ntheta6 resolved:", theta6_int_case_resolver.resolve(ctx.case_data[0]))
 
 
 # # # TODO: Create function that gets operating point rpms and qda rpm list and returns
 # # # TODO: index to extract qda results from such that they are correct
-
-
-# # # f(cases_sampled)
-# # m.evaluate(ctx)
-# # m1.evaluate(ctx)

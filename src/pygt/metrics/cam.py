@@ -151,46 +151,6 @@ def lubrication_number(
 #         return pressure_continuous(node_angle)
 
 
-# class LubricationNumber(AbstractMetric):
-#     def __init__(
-#         self,
-#         column: str,
-#         duration_param: str,
-#         theta_template: str,
-#         name: Optional[str] = None,
-#         label: Optional[str] = None,
-#     ):
-#         # column represents relative velocity between cam surface and bucket
-#         self.column = column  # e.g. "Int_Entrainment Velocity"
-#         self.name = name
-#         self.label = label
-#         self.duration_param = duration_param
-#         self.theta_template = theta_template  # e.g. "int_theta{}"
-
-#     def theta6(self, params: dict[str, float]):
-#         duration = params[self.duration_param]
-#         thetas = [params[self.theta_template.format(i)] for i in range(1, 6)]
-#         return duration / 2 - sum(thetas)
-
-#     def __call__(
-#         self, sim_data: Union[pd.DataFrame, None], params: dict[str, float]
-#     ) -> float:
-#         if sim_data is None:
-#             return None
-
-#         theta6 = self.theta6(params)
-#         try:
-#             entrainment_vel = sim_data.loc[-theta6:theta6, self.column]
-#         except KeyError:
-#             logger.warning(
-#                 f'MaxLubricationNumber: Column "{self.column}" is not in dataframe'
-#             )
-#             return None
-
-#         # minimum magnitude of entrainment velocity over theta6
-#         return 2 * entrainment_vel.abs().min()
-
-
 # class LiftArea(AbstractMetric):
 #     def __init__(
 #         self,
@@ -224,6 +184,8 @@ def lubrication_number(
 #         # integrate area under lift curve between ramps
 #         out = quad(f, -duration / 2, duration / 2, full_output=True)
 #         return out[0]  # area in first index of tuple
+
+# def lift_area()
 
 
 # class BucketContactLateralPositionMargin(AbstractMetric):
