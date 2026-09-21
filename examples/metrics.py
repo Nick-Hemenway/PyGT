@@ -258,12 +258,12 @@ m = opt.AggregatedMetric(
     name="overlap",
     func=metrics.MultiCaseEvaluator(
         func=lambda signal: np.squeeze(signal),
-        arg_map={
+        case_arg_map={
             "signal": Signal(SampledSignals.OVERLAP),
         },
         op_points_count=op_points.size,
     ),
-    arg_map={"cases": "case_data_sampled"},
+    arg_map={"case_data": "case_data_sampled"},
     where=rs.Smallest(Op.RPM),
     agg=opt.aggregate.Squeeze(),
 )
@@ -271,17 +271,18 @@ m = opt.AggregatedMetric(
 between_ramps_int = BetweenSymmetric(
     Signal(Signals.INDEX), duration=DesignVar(Params.INT_DURATION)
 )
+reg.add_metric(m)
 
 m1 = opt.AggregatedMetric(
     name="int_spring_margin",
     func=metrics.MultiCaseEvaluator(
         func=metrics.signal_min,
-        arg_map={
+        case_arg_map={
             "signal": Signal(Signals.INT_SPRING_MARGIN, where=between_ramps_int),
         },
         op_points_count=op_points.size,
     ),
-    arg_map={"cases": "case_data"},
+    arg_map={"case_data": "case_data"},
     where=rs.EqualTo(Op.RPM, 2000),
     agg=opt.aggregate.Squeeze(),
 )
@@ -290,14 +291,14 @@ m2 = opt.AggregatedMetric(
     name="int_contact_pressure",
     func=metrics.MultiCaseEvaluator(
         func=metrics.signal_max,
-        arg_map={
+        case_arg_map={
             "signal": Signal(
                 Signals.INT_CONTACT_PRESSURE_IDLE, where=between_ramps_int
             ),
         },
         op_points_count=op_points.size,
     ),
-    arg_map={"cases": "case_data"},
+    arg_map={"case_data": "case_data"},
     where=rs.EqualTo(Op.RPM, 2000),
     agg=opt.aggregate.Squeeze(),
 )
@@ -307,7 +308,7 @@ reg.add_provider(
         name="impulse_width",
         func=metrics.MultiCaseEvaluator(
             func=cm.impulse_width,
-            arg_map={
+            case_arg_map={
                 "theta1": Params.INT_THETA1,
                 "theta2": Params.INT_THETA2,
                 "theta3": Params.INT_THETA3,
@@ -315,7 +316,7 @@ reg.add_provider(
             },
             op_points_count=op_points.size,
         ),
-        arg_map={"cases": "case_data"},
+        arg_map={"case_data": "case_data"},
     )
 )
 
@@ -328,30 +329,83 @@ m3 = opt.AggregatedMetric(
     agg=opt.aggregate.Squeeze(),
 )
 
+reg.add_provider(
+    opt.Provider(
+        name="theta6",
+        func=lambda t1, t2, t3, t4, t5, duration: np.asarray(
+            duration / 2 - (t1 + t2 + t3 + t4 + t5)
+        ).flatten(),
+        arg_map={
+            "t1": Params.INT_THETA1,
+            "t2": Params.INT_THETA2,
+            "t3": Params.INT_THETA3,
+            "t4": Params.INT_THETA4,
+            "t5": Params.INT_THETA5,
+            "duration": Params.INT_DURATION,
+        },
+    )
+)
+
+reg.add_metric(
+    opt.AggregatedMetric(
+        name="theta_6",
+        func=lambda t1, t2, t3, t4, t5, duration: (
+            duration / 2 - (t1 + t2 + t3 + t4 + t5)
+        ),
+        arg_map={
+            "t1": Params.INT_THETA1,
+            "t2": Params.INT_THETA2,
+            "t3": Params.INT_THETA3,
+            "t4": Params.INT_THETA4,
+            "t5": Params.INT_THETA5,
+            "duration": Params.INT_DURATION,
+        },
+        agg=opt.aggregate.Squeeze(),
+        where=opt.resolvers.FirstOperatingPoint(),
+    )
+)
+
 DV = DesignVar
 theta6_int_case_resolver = DV(Params.INT_DURATION) / 2 - (
     DV(Params.INT_THETA1)
     + DV(Params.INT_THETA2)
     + DV(Params.INT_THETA3)
     + DV(Params.INT_THETA4)
+    + DV(Params.INT_THETA5)
 )
 
-reg.add_metric(m)
 reg.add_metric(m1)
 reg.add_metric(m2)
+reg.add_metric(m3)
+
+
+m4 = opt.Metric(
+    name="lubrication_number",
+    func=metrics.MultiCaseEvaluator(
+        func=cm.lubrication_number,
+        case_arg_map={
+            "angle": Signal(Signals.INDEX),
+            "entrainment_vel": Signal(Signals.INT_LIFT),
+        },
+        context_arg_map={"theta6": "theta6"},
+        op_points_count=op_points.size,
+    ),
+    arg_map={"case_data": "case_data"},
+)
+
 
 ctx = reg.context_physical(x1, operating_points=op_points)
 
-print(ctx.int_contact_pressure)
-case = ctx.case_data[0]
+# print(ctx.int_contact_pressure)
+# case = ctx.case_data[0]
 
-print("\ntheta6 resolved:", theta6_int_case_resolver.resolve(case))
-
-
-# # TODO: Create function that gets operating point rpms and qda rpm list and returns
-# # TODO: index to extract qda results from such that they are correct
+# print("\ntheta6 resolved:", theta6_int_case_resolver.resolve(case))
 
 
-# # f(cases_sampled)
-# m.evaluate(ctx)
-# m1.evaluate(ctx)
+# # # TODO: Create function that gets operating point rpms and qda rpm list and returns
+# # # TODO: index to extract qda results from such that they are correct
+
+
+# # # f(cases_sampled)
+# # m.evaluate(ctx)
+# # m1.evaluate(ctx)

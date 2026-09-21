@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 import numpy as np
+import optwrap
 import optwrap.resolvers as rs
 
 from ..exceptions import MissingSignalError
@@ -14,14 +15,21 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MultiCaseEvaluator:
     func: Callable[..., float]
-    arg_map: dict[str, str | rs.Resolver]
+    case_arg_map: dict[str, str | rs.Resolver]
+    context_arg_map: dict[str, str | rs.Resolver] | None = None
     op_points_count: int | None = None
 
-    def __call__(self, cases: list[CaseData]):
+    def __call__(
+        self, case_data: list[CaseData], context: optwrap.Context | None = None
+    ):
         res = []
-        for case in cases:
+        ctx_kwargs_list = self._context_kwargs_list(
+            case_count=len(case_data), context=context
+        )
+        for case, ctx_kwargs in zip(case_data, ctx_kwargs_list):
             try:
-                kwargs = rs.build_kwargs(case, self.arg_map)
+                kwargs = rs.build_kwargs(case, self.case_arg_map)
+                kwargs = kwargs | ctx_kwargs
             except MissingSignalError as e:
                 logger.warning("%s", e)
                 res.append(None)
@@ -31,3 +39,35 @@ class MultiCaseEvaluator:
         if self.op_points_count is not None:
             res = res.reshape(-1, self.op_points_count)
         return res
+
+    def _context_kwargs_list(
+        self, case_count: int, context: optwrap.Context | None = None
+    ) -> list[dict]:
+        if (context is None) or (self.context_arg_map is None):
+            return [{} for _ in range(case_count)]
+
+        kwargs = rs.build_kwargs(context, arg_map=self.context_arg_map)
+
+        # Ensure all arguments have the correct length
+        for key, val in kwargs.items():
+            try:
+                count = len(val)
+            except TypeError as e:
+                raise ValueError(
+                    (
+                        "All attributes must have the same length as number "
+                        f"of cases but {key} doesn't have length attribute"
+                    )
+                ) from e
+            else:
+                if count != case_count:
+                    raise ValueError(
+                        (
+                            "All attributes must have the same length as number "
+                            f"of cases but {key} has length of {count}"
+                        )
+                    )
+        kwargs_list = []
+        for i in range(case_count):
+            kwargs_list.append({key: val[i] for key, val in kwargs.items()})
+        return kwargs_list
