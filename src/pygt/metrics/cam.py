@@ -1,16 +1,10 @@
 import logging
 
-# from typing import Optional, Union
 import numpy as np
 from numpy.typing import NDArray
-
-# import pandas as pd
-
-# from hydrodata.signal import FFT_of_df
-# from pycam.optimize.metrics_base import AbstractMetric
-# from scipy.integrate import cumulative_simpson, quad
-# from scipy.interpolate import CubicSpline
-# from scipy.optimize import root_scalar
+from scipy.integrate import quad
+from scipy.interpolate import CubicSpline
+from scipy.optimize import root_scalar
 
 logger = logging.getLogger(__name__)
 
@@ -32,58 +26,87 @@ def lubrication_number(
     return 2 * np.abs(entrainment_vel[mask]).min()
 
 
-# class FirstLubricationNodeInclination(AbstractMetric):
-#     def __init__(
-#         self,
-#         column: str,
-#         duration_param: str,
-#         name: Optional[str] = None,
-#         label: Optional[str] = None,
-#     ):
-#         self.column = column
-#         self.name = name
-#         self.label = label
-#         self.duration_param = duration_param
+def lift_area(angle: NDArray, lift: NDArray, ramp_height: float) -> float:
+    angle = np.asarray(angle)
+    lift = np.asarray(lift)
+    f = CubicSpline(angle, lift - ramp_height)
+    out = quad(f, angle.min(), angle.max(), full_output=True)
+    return out[0]  # area in first index of tuple
 
-#     def __call__(
-#         self, sim_data: Union[pd.DataFrame, None], params: dict[str, float]
-#     ) -> float:
-#         if sim_data is None:
-#             return None
 
-#         try:
-#             velocity = sim_data[self.column]
-#         except KeyError:
-#             logger.warning(
-#                 f'FirstLubricationNodeInclination: Column "{self.column}" is not in dataframe'
-#             )
-#             return None
+def bucket_lateral_position_margin(position: NDArray, bucket_diameter: float) -> float:
+    position = np.asarray(position)
+    opening = np.abs(position.min())
+    closing = np.abs(position.max())
+    lateral_position = max(opening, closing)
+    return bucket_diameter / 2 - lateral_position
 
-#         duration = params[self.duration_param]
-#         first_half = velocity.loc[-duration / 2 : 0]
 
-#         velocity = CubicSpline(x=first_half.index, y=first_half.to_numpy())
-#         try:
-#             result = root_scalar(velocity, bracket=[-duration / 2, 0])
-#         except ValueError:
-#             logger.exception(
-#                 "Root solve in FirstLubricationNodeInclination not succesful -- returning None"
-#             )
-#             # we will assume that if root finding fails, e.g. case when we get
-#             # "f(a) and f(b) must have different signs" error, that the profile is
-#             # probably not well behaved anyway, so we'll return None assuming the
-#             # profile is bad
-#             return None
-#         deg_to_rad = 180 / np.pi
-#         cam_to_crank_deg = 2
+def min_negative_radius_of_curvature(
+    roc: NDArray, no_negative_val: float = 1e9
+) -> float:
+    valid = roc[roc < 0]
+    if len(valid) == 0:
+        return no_negative_val
+    else:
+        return np.abs(valid).min()
 
-#         if not result.converged:
-#             logger.error("Lubrication node did not converge properly -- returning None")
-#             return None
 
-#         return (
-#             velocity(result.root, nu=1) * -1 * deg_to_rad * cam_to_crank_deg
-#         )  # mm/deg/crank-rad
+def first_lube_node_inclination(angle: NDArray, entrainment_velocity: NDArray) -> float:
+    """Compute inclination of entrainment velocity and lubrication node (zero-crossing)
+
+    Parameters
+    ----------
+    angle : NDArray
+        Crank angle in cam-degrees
+    entrainment_velocity : NDArray
+        Entrainment velocity in mm / crank-radian
+
+    Returns
+    -------
+    float
+        Slope of entrainment velocity as it crosses through zero [mm / cam-rad ^ 2]
+
+    Notes
+    -----
+
+    Units:
+    - Entrainment velocity units are in mm / crank-radian
+    - Angle input units are in cam-deg
+    - Taking slope of input data yields ( mm / crank-radian) / cam-deg = mm / (crank-radian * cam-deg)
+    - We can convert to mm / cam-rad ^ 2 as follows:
+        - mm / (crank-radian * cam-deg) * (180 cam-deg / pi cam-radian) * (2 crank-radian / cam-radian)
+
+
+    """
+    angle = np.asarray(angle)
+    entrainment_velocity = np.asarray(entrainment_velocity)
+    first_half_mask = angle < 0
+    vel_func = CubicSpline(
+        x=angle[first_half_mask], y=entrainment_velocity[first_half_mask]
+    )
+    try:
+        result = root_scalar(vel_func, bracket=[angle.min(), 0])
+    except ValueError:
+        logger.exception(
+            "Root solve in first_lube_node_inclination not successful -- returning None"
+        )
+        # we will assume that if root finding fails, e.g. case when we get
+        # "f(a) and f(b) must have different signs" error, that the profile is
+        # probably not well behaved anyway, so we'll return None assuming the
+        # profile is bad
+        return None
+    if not result.converged:
+        logger.warning(
+            "first_lubrication_node_inclination root solve did not converge -- returning None"
+        )
+        return None
+
+    slope = vel_func(result.root, nu=1)
+    deg_to_rad = 180 / np.pi
+    cam_to_crank_deg = 2
+    # mm/deg/crank-rad
+    return np.abs(slope) * deg_to_rad * cam_to_crank_deg
 
 
 # class FirstLubricationNodeContactPressure(AbstractMetric):
@@ -149,122 +172,6 @@ def lubrication_number(
 #         # evaluate pressure at location where velocity goes to zero
 #         pressure_continuous = CubicSpline(pressure.index, pressure.to_numpy())
 #         return pressure_continuous(node_angle)
-
-
-# class LiftArea(AbstractMetric):
-#     def __init__(
-#         self,
-#         column: str,
-#         duration_param: str,
-#         ramp_height_param: str,
-#         name: Optional[str] = None,
-#         label: Optional[str] = None,
-#     ):
-#         self.name = name
-#         self.label = label
-#         self.column = column
-#         self.duration_param = duration_param
-#         self.ramp_height_param = ramp_height_param
-
-#     def __call__(
-#         self, sim_data: Union[pd.DataFrame, None], params: dict[str, float]
-#     ) -> float:
-#         if sim_data is None:
-#             return None
-
-#         duration = params[self.duration_param]
-#         ramp_height = params[self.ramp_height_param]
-#         try:
-#             lift = sim_data[self.column]
-#         except KeyError:
-#             logger.warning(f'LiftArea: Column "{self.column}" is not in dataframe')
-#             return None
-#         # create continuous function, removing ramp height
-#         f = CubicSpline(sim_data.index, lift - ramp_height)
-#         # integrate area under lift curve between ramps
-#         out = quad(f, -duration / 2, duration / 2, full_output=True)
-#         return out[0]  # area in first index of tuple
-
-# def lift_area()
-
-
-# class BucketContactLateralPositionMargin(AbstractMetric):
-#     def __init__(
-#         self,
-#         column: str,
-#         bucket_diameter_param: str,
-#         duration_param: str,
-#         name: Optional[str] = None,
-#         label: Optional[str] = None,
-#     ):
-#         self.column = column
-#         self.bucket_diameter_param = bucket_diameter_param
-#         self.name = name
-#         self.label = label
-#         self.duration_param = duration_param
-
-#     def __call__(
-#         self, sim_data: Union[pd.DataFrame, None], params: dict[str, float]
-#     ) -> float:
-#         # case where sim failed and there is no data
-#         if sim_data is None:
-#             return None
-
-#         try:
-#             position: pd.Series = sim_data[self.column]  # pd.Series
-#         except KeyError:
-#             logger.warning(
-#                 f'BucketContactLateralPositionMargin: Column "{self.column}" is not in dataframe'
-#             )
-#             # case where sim data is made but quasidynamic analysis fails and key isn't available
-#             return None
-
-#         duration = params[self.duration_param]
-#         bucket_diameter = params[self.bucket_diameter_param]
-
-#         opening = np.abs(position.loc[-duration / 2 : duration / 2].min())
-#         closing = np.abs(position.loc[-duration / 2 : duration / 2].max())
-
-#         lateral_position = max(opening, closing)
-#         return bucket_diameter / 2 - lateral_position
-
-
-# class MinNegativeRadiusOfCurvature(AbstractMetric):
-#     def __init__(
-#         self,
-#         column: str,
-#         duration_param: str,
-#         name: Optional[str] = None,
-#         label: Optional[str] = None,
-#         no_negative_val: float = 1e9,
-#     ):
-#         self.name = name
-#         self.label = label
-#         self.column = column
-#         self.duration_param = duration_param
-#         self.no_negative_val = no_negative_val
-
-#     def __call__(
-#         self, sim_data: Union[pd.DataFrame, None], params: dict[str, float]
-#     ) -> float:
-#         if sim_data is None:
-#             return None
-
-#         duration = params[self.duration_param]
-#         try:
-#             roc = sim_data[self.column]
-#         except KeyError:
-#             logger.warning(
-#                 f'MinNegativeRadiusOfCurvature: Column "{self.column}" is not in dataframe'
-#             )
-#             return None
-
-#         roc = roc.loc[-duration / 2 : duration / 2]
-#         valid = roc[roc.lt(0)]
-#         if len(valid) == 0:
-#             return self.no_negative_val
-#         else:
-#             return valid.abs().min()
 
 
 # class CamTorqueMetrics(AbstractMetric):
