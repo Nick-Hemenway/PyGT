@@ -19,7 +19,7 @@ from pygt.cases import CaseList, ExpandedCaseList, build_guard_design
 from pygt.data_export import DataExporter
 from pygt.output_spec import ExportSpec, SampledOutputSpec
 from pygt.param_file import DesignWriter  # noqa
-from pygt.resolvers import BetweenSymmetric, DesignVar, Signal
+from pygt.resolvers import BetweenSymmetric, DesignVar, Literal, Signal
 from pygt.results_parse import (
     ExportedOutputParser,
     SampledOutputParser,
@@ -305,6 +305,42 @@ m4 = opt.Metric(
     arg_map={"case_data": "case_data"},
 )
 
+m5 = opt.Metric(
+    name="lift_area",
+    func=metrics.MultiCaseEvaluator(
+        func=cm.lift_area,
+        case_arg_map={
+            "angle": Signal(Signals.INDEX),
+            "lift": Signal(Signals.INT_LIFT),
+            "ramp_height": Literal(0.1),
+        },
+        op_points_count=op_points.size,
+    ),
+)
+
+m6 = opt.Metric(
+    name="position_margin",
+    func=metrics.MultiCaseEvaluator(
+        func=cm.bucket_lateral_position_margin,
+        case_arg_map={
+            "position": Signal(Signals.INT_LATERAL_POSITION),
+            "bucket_diameter": Literal(32),
+        },
+        op_points_count=op_points.size,
+    ),
+)
+
+m7 = opt.Metric(
+    name="min_neg_roc",
+    func=metrics.MultiCaseEvaluator(
+        func=cm.min_negative_radius_of_curvature,
+        case_arg_map={
+            "roc": Signal(Signals.INT_ROC),
+        },
+        op_points_count=op_points.size,
+    ),
+)
+
 
 ctx = reg.context_physical(x1, operating_points=op_points)
 
@@ -315,9 +351,12 @@ print(m1.evaluate(ctx))
 print(m2.evaluate(ctx))
 print(m3.evaluate(ctx))
 print(m4.evaluate(ctx))
+print(m5.evaluate(ctx))
+print(m6.evaluate(ctx))
 
 print("\ntheta6 resolved:", theta6_int_case_resolver.resolve(ctx.case_data[0]))
 
 
 # # # TODO: Create function that gets operating point rpms and qda rpm list and returns
 # # # TODO: index to extract qda results from such that they are correct
+# TODO: Should we use RoC effective of knife edge?
