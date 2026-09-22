@@ -80,7 +80,7 @@ reg.add("theta1", lower=1, upper=20, default=10)
 reg.add("theta2", lower=1, upper=15, default=10)
 reg.add("theta3", lower=1, upper=20, default=10)
 reg.add("theta5", lower=1, upper=20, default=5)
-reg.add_operating_point_param("erpm")
+reg.add_operating_point_param(opt.OperatingPointParameter("erpm"))
 
 op_points = opt.OperatingPoints(erpm=[1000, 2000, 3000])
 

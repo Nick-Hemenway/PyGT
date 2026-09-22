@@ -162,7 +162,7 @@ class SimulationData:
         else:
             ctx = self.caselist.caselist.context
         params = {}
-        for name in ctx.names(vars=True, operating_point_params=False, nodes=False):
+        for name in ctx.names(vars=True, op_point_params=False, nodes=False):
             params[name] = self.caselist.values[name][idx]
         return params
 
@@ -172,7 +172,7 @@ class SimulationData:
         else:
             ctx = self.caselist.caselist.context
         params = {}
-        for name in ctx.names(vars=False, operating_point_params=True, nodes=False):
+        for name in ctx.names(vars=False, op_point_params=True, nodes=False):
             params[name] = self.caselist.values[name][idx]
         return params
 

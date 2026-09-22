@@ -4,7 +4,7 @@ from typing import Callable
 
 import numpy as np
 from numpy.typing import NDArray
-from optwrap.resolvers import AttributePathResolver
+from optwrap.resolvers import Ref
 
 from .simdata import CaseData
 
@@ -172,7 +172,7 @@ def as_resolver(resolver: Resolvable) -> CaseDataResolver:
     if isinstance(resolver, CaseDataResolver):
         return resolver
     elif isinstance(resolver, str):
-        return AttributePathResolver(resolver)
+        return Ref(resolver)
     else:
         return Literal(resolver)
 

@@ -90,7 +90,7 @@ reg.add(Vars.EXH_THETA5, lower=0, upper=20, default=8)
 reg.add(Vars.EXH_F1, lower=0, upper=4, default=1.130)
 reg.add(Vars.EXH_F3, lower=0, upper=4, default=1.140)
 reg.add(Vars.EXH_F4, lower=0, upper=4, default=1.916)
-reg.add_operating_point_param(Op.RPM)
+reg.add_operating_point_param(opt.OperatingPointParameter(Op.RPM))
 
 op_points = opt.OperatingPoints(**{Op.RPM: [1000, 2000, 3000]})
 
@@ -360,3 +360,6 @@ print("\ntheta6 resolved:", theta6_int_case_resolver.resolve(ctx.case_data[0]))
 # # # TODO: Create function that gets operating point rpms and qda rpm list and returns
 # # # TODO: index to extract qda results from such that they are correct
 # TODO: Should we use RoC effective of knife edge?
+# TODO: Add ScalarExpand() resolver to expand scalar to number of cases. This would allow scalar providers
+# to be used as input to multicaseevaluator
+#

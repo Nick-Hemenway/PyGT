@@ -126,7 +126,7 @@ reg.add("exh_f1", lower=0, upper=4, default=1.130)
 reg.add("exh_f2", lower=0, upper=4, default=1.503)
 reg.add("exh_f3", lower=0, upper=4, default=1.140)
 reg.add("exh_f4", lower=0, upper=4, default=1.916)
-reg.add_operating_point_param("erpm")
+reg.add_operating_point_param(opt.OperatingPointParameter("erpm"))
 
 op_points = opt.OperatingPoints(erpm=[1000, 2000, 3000])
 

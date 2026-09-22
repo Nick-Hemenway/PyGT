@@ -31,13 +31,11 @@ class CaseList:
     @property
     def _values(self):
         out = {}
-        for key in self.context.names(
-            vars=True, operating_point_params=False, nodes=False
-        ):
+        for key in self.context.names(vars=True, op_point_params=False, nodes=False):
             out[key] = getattr(self.context, key)
         if self.context.operating_points is not None:
             for key in self.context.names(
-                vars=False, operating_point_params=True, nodes=False
+                vars=False, op_point_params=True, nodes=False
             ):
                 out[key] = getattr(self.context, key)
         return out
@@ -76,7 +74,7 @@ def build_guard_design(
     x0 = registry.pack()
     ctx = registry.context_physical(x0, operating_points=operating_points)
     guard_design = {}
-    for name in ctx.names(vars=True, operating_point_params=True, nodes=False):
+    for name in ctx.names(vars=True, op_point_params=True, nodes=False):
         guard_design[name] = getattr(ctx, name).flatten()[0]
     return guard_design
 
