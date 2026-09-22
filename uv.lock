@@ -699,7 +699,7 @@ wheels = [
 [[package]]
 name = "optwrap"
 version = "5.2.2"
-source = { git = "https://github.com/Mercury-PDE-DesignAnalysisGroup/Optimization-Abstraction-Layer?tag=v5.2.2#7673b9e910e96cd10eb90e4f350ebd0617229763" }
+source = { git = "https://github.com/Mercury-PDE-DesignAnalysisGroup/Optimization-Abstraction-Layer?branch=dev#99ad52bf27229f3d39b619273812491afd363d41" }
 dependencies = [
     { name = "numpy" },
     { name = "pymoo" },
@@ -952,7 +952,7 @@ dev = [
 requires-dist = [
     { name = "ipykernel", marker = "extra == 'extra'", specifier = ">=7.3.0" },
     { name = "numpy", specifier = ">=2.5.3" },
-    { name = "optwrap", git = "https://github.com/Mercury-PDE-DesignAnalysisGroup/Optimization-Abstraction-Layer?tag=v5.2.2" },
+    { name = "optwrap", git = "https://github.com/Mercury-PDE-DesignAnalysisGroup/Optimization-Abstraction-Layer?branch=dev" },
     { name = "pandas", specifier = ">=3.0.5" },
 ]
 provides-extras = ["extra"]
