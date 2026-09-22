@@ -19,7 +19,7 @@ from pygt.cases import CaseList, ExpandedCaseList, build_guard_design
 from pygt.data_export import DataExporter
 from pygt.output_spec import ExportSpec, SampledOutputSpec
 from pygt.param_file import DesignWriter  # noqa
-from pygt.resolvers import BetweenSymmetric, DesignVar, Literal, Signal
+from pygt.resolvers.case_data import BetweenSymmetric, DesignVar, Literal, Signal
 from pygt.results_parse import (
     ExportedOutputParser,
     SampledOutputParser,
@@ -363,3 +363,4 @@ print("\ntheta6 resolved:", theta6_int_case_resolver.resolve(ctx.case_data[0]))
 # TODO: Add ScalarExpand() resolver to expand scalar to number of cases. This would allow scalar providers
 # to be used as input to multicaseevaluator
 #
+# TODO: Make sure we can run sims with guard design and no operating points

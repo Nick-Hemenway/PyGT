@@ -6,7 +6,7 @@ import numpy as np
 from numpy.typing import NDArray
 from optwrap.resolvers import Ref
 
-from .simdata import CaseData
+from ..simdata import CaseData
 
 
 class SignalFilter(abc.ABC):
