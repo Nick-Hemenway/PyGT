@@ -148,34 +148,14 @@ class SimulationData:
                 CaseData.from_dataframe(
                     case_id=case_id,
                     design_id=design_id,
-                    design_variables=self._get_design_variables(idx),
-                    operating_point=self._get_operating_point(idx),
+                    design_variables=self.caselist.get_design_variables(case_id),
+                    operating_point=self.caselist.get_operating_point(case_id),
                     index_name=self.index_name,
                     required_signals=self.required_signals,
                     df=df,
                 )
             )
         return out
-
-    def _get_design_variables(self, idx: int):
-        if isinstance(self.caselist, CaseList):
-            ctx = self.caselist.context
-        else:
-            ctx = self.caselist.caselist.context
-        params = {}
-        for name in ctx.names(vars=True):
-            params[name] = self.caselist.values[name][idx]
-        return params
-
-    def _get_operating_point(self, idx: int):
-        if isinstance(self.caselist, CaseList):
-            ctx = self.caselist.context
-        else:
-            ctx = self.caselist.caselist.context
-        params = {}
-        for name in ctx.names(op_point_params=True):
-            params[name] = self.caselist.values[name][idx]
-        return params
 
     def get_design(self, design_id: int) -> DesignData:
         d = DesignData(

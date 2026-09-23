@@ -66,6 +66,20 @@ class CaseList:
         npoints = self.context.operating_points.size
         return int(self.size / npoints)
 
+    def get_design_variables(self, case_id: int):
+        params = {}
+        for name in self.context.names(vars=True):
+            params[name] = self.caselist.values[name][case_id]
+        return params
+
+    def get_operating_point(self, case_id: int):
+        if self.context.operating_points is None:
+            return {}
+        params = {}
+        for name in self.context.names(op_point_params=True):
+            params[name] = self.caselist.values[name][case_id]
+        return params
+
 
 def build_guard_design(
     registry: Registry,
@@ -130,6 +144,12 @@ class ExpandedCaseList:
     @property
     def design_count(self) -> int:
         return self.caselist.design_count
+
+    def get_design_variables(self, case_id: int):
+        return self.caselist.get_design_variables(case_id)
+
+    def get_operating_point(self, case_id: int):
+        return self.caselist.get_operating_point(case_id)
 
 
 # NOTE: This functions are implemented but not used.
