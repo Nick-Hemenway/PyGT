@@ -19,7 +19,7 @@ from pygt.cases import CaseList, ExpandedCaseList, build_guard_design
 from pygt.data_export import DataExporter
 from pygt.output_spec import ExportSpec, SampledOutputSpec
 from pygt.param_file import DesignWriter  # noqa
-from pygt.resolvers.case_data import BetweenSymmetric, DesignVar, Literal, Signal
+from pygt.resolvers import Literal, Ref, Signal, Window
 from pygt.results_parse import (
     ExportedOutputParser,
     SampledOutputParser,
@@ -180,8 +180,8 @@ m = opt.AggregatedMetric(
     agg=opt.aggregate.Squeeze(),
 )
 
-between_ramps_int = BetweenSymmetric(
-    Signal(Signals.INDEX), duration=DesignVar(Vars.INT_DURATION)
+between_ramps_int = Window(
+    Signal(Signals.INDEX), duration=Ref(Vars.INT_DURATION)
 )
 reg.add_metric(m)
 
@@ -277,7 +277,7 @@ reg.add_metric(
     )
 )
 
-DV = DesignVar
+DV = Ref
 theta6_int_case_resolver = DV(Vars.INT_DURATION) / 2 - (
     DV(Vars.INT_THETA1)
     + DV(Vars.INT_THETA2)
