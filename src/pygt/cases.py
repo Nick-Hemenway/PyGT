@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, Self
+from typing import Self
 
 import numpy as np
 from numpy.typing import NDArray
@@ -37,11 +37,13 @@ class CaseList:
 
         # Ensure that size of arrays provided is divisible by number of operating points
         if self.operating_points is not None:
-            design_count = self.size / self.op_point_size
-            if int(design_count) != design_count:
+            if (self.size % self.op_point_size) != 0:
                 raise ValueError(
-                    "Total case count is not divisible by number of operating points"
+                    f"Operating point size ({self.op_point_size}) is not consistent with the number of cases ({self.size})"
                 )
+
+        # Construct cached values and ensure arrays are broadcastable
+        self.values
 
     @cached_property
     def values(self) -> dict[str, np.ndarray]:
@@ -66,7 +68,7 @@ class CaseList:
                 out[key] = arr
         except ValueError as e:
             raise ValueError(
-                "All operating point columns must have the same length."
+                "Variables, params, and operating points must all be broadcastable."
             ) from e
         else:
             return out
@@ -75,8 +77,11 @@ class CaseList:
     def size(self):
         return len(next(iter(self.values.values())))
 
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> NDArray:
         return self.values[key]
+
+    def __getattr__(self, name: str) -> NDArray:
+        return self.values[name]
 
     @cached_property
     def index_map(self) -> NDArray:
@@ -96,18 +101,18 @@ class CaseList:
             return int(self.size / self.op_point_size)
 
     def get_design_variables(self, case_id: int):
-        params = {}
-        for name in self.context.names(vars=True):
-            params[name] = self.caselist.values[name][case_id]
-        return params
+        vars = {}
+        for name, arr in self.design_variables.items():
+            vars[name] = arr[case_id]
+        return vars
 
     def get_operating_point(self, case_id: int):
         if self.operating_points is None:
             return {}
-        params = {}
-        for name in self.context.names(op_point_params=True):
-            params[name] = self.caselist.values[name][case_id]
-        return params
+        op_points = {}
+        for name, arr in self.operating_points.items():
+            op_points[name] = arr[case_id]
+        return op_points
 
     @classmethod
     def from_context(cls, context: Context, write_params: bool = True) -> Self:
@@ -148,6 +153,21 @@ class ExpandedCaseList:
         self.index_map = np.asarray(self.index_map)
 
     @property
+    def sanitized_guard_design(self):
+        if self.caselist.params is None:
+            return self.guard_design
+
+        out = self.guard_design.copy()
+        for name, val in self.caselist.params.items():
+            # Only fill missing parameters, don't overide params
+            # if they're already in the guard design
+            if name not in out:
+                # Params are by definition all the same so
+                # we will grab the first one
+                out[name] = np.atleast_1d(val)[0]
+        return out
+
+    @property
     def _real_mask(self) -> NDArray:
         return self.index_map >= 0
 
@@ -161,7 +181,7 @@ class ExpandedCaseList:
         for key, arr in self.caselist.values.items():
             expanded = np.empty(len(self.index_map))
             expanded[self._real_mask] = arr[self.index_map[self._real_mask]]
-            expanded[self._guard_mask] = self.guard_design[key]
+            expanded[self._guard_mask] = self.sanitized_guard_design[key]
             out[key] = expanded
         return out
 
