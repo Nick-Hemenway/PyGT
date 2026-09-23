@@ -246,6 +246,19 @@ def test_case_size_per_license_count(
     assert expanded.size == expected_size
 
 
+@pytest.mark.parametrize("licenses, expected_size", [(1, 7), (2, 4), (3, 3), (6, 2)])
+def test_packet_size_per_license_count(
+    caselist: CaseList,
+    guard_design: dict[str, float],
+    licenses: int,
+    expected_size: int,
+):
+    expanded = ExpandedCaseList.from_license_count(
+        caselist=caselist, guard_design=guard_design, licenses=licenses
+    )
+    assert expanded.packet_size == expected_size
+
+
 def test_expanded_caselist_index_map_from_licenses(
     caselist: CaseList,
     guard_design: dict[str, float],

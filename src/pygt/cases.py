@@ -176,7 +176,7 @@ class ExpandedCaseList:
         return self.index_map < 0
 
     @cached_property
-    def values(self):
+    def values(self) -> dict[str, NDArray]:
         out = {}
         for key, arr in self.caselist.values.items():
             expanded = np.empty(len(self.index_map))
@@ -185,12 +185,24 @@ class ExpandedCaseList:
             out[key] = expanded
         return out
 
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> NDArray:
         return self.values[key]
 
     @property
-    def size(self):
+    def size(self) -> int:
         return len(next(iter(self.values.values())))
+
+    @property
+    def packet_count(self) -> int:
+        return sum(self.index_map == -1)
+
+    @property
+    def packet_size(self) -> int:
+        return int(self.size / self.packet_count)
+
+    @property
+    def real_designs_per_packet(self) -> int:
+        return self.packet_size - 1
 
     @classmethod
     def from_packet_size(
