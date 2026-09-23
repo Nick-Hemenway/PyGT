@@ -202,6 +202,21 @@ class ExpandedCaseList:
             index_map=build_index_map(cases=caselist.size, packet_size=packet_size),
         )
 
+    @classmethod
+    def from_license_count(
+        cls, caselist: CaseList, guard_design: dict[str, float], licenses: int
+    ) -> Self:
+        if (caselist.size % licenses) != 0:
+            raise ValueError(
+                f"CaseList size ({caselist.size}) is not evenly divisible by the number of licenses ({licenses})"
+            )
+        packet_size = int(caselist.size / licenses) + 1
+        return cls(
+            caselist=caselist,
+            guard_design=guard_design,
+            index_map=build_index_map(cases=caselist.size, packet_size=packet_size),
+        )
+
     @cached_property
     def design_map(self) -> NDArray:
         out = np.empty(len(self.index_map))

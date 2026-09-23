@@ -221,3 +221,50 @@ def test_build_guard_design():
 
     guard = pygt.build_guard_design(registry=reg, operating_points=ops)
     assert guard == {"a": 1, "b": 2, "rpm": 100, "p1": 1000}
+
+
+@pytest.mark.parametrize("licenses", [4, 5])
+def test_invalid_license_count(
+    caselist: CaseList, guard_design: dict[str, float], licenses: int
+):
+    with pytest.raises(ValueError):
+        ExpandedCaseList.from_license_count(
+            caselist=caselist, guard_design=guard_design, licenses=licenses
+        )
+
+
+@pytest.mark.parametrize("licenses, expected_size", [(1, 7), (2, 8), (3, 9), (6, 12)])
+def test_case_size_per_license_count(
+    caselist: CaseList,
+    guard_design: dict[str, float],
+    licenses: int,
+    expected_size: int,
+):
+    expanded = ExpandedCaseList.from_license_count(
+        caselist=caselist, guard_design=guard_design, licenses=licenses
+    )
+    assert expanded.size == expected_size
+
+
+def test_expanded_caselist_index_map_from_licenses(
+    caselist: CaseList,
+    guard_design: dict[str, float],
+):
+    expanded = ExpandedCaseList.from_license_count(
+        caselist=caselist,
+        guard_design=guard_design,
+        licenses=3,
+    )
+    assert np.array_equal(expanded.index_map, [-1, 0, 1, -1, 2, 3, -1, 4, 5])
+
+
+def test_expanded_caselist_design_map_from_licenses(
+    caselist: CaseList,
+    guard_design: dict[str, float],
+):
+    expanded = ExpandedCaseList.from_license_count(
+        caselist=caselist,
+        guard_design=guard_design,
+        licenses=3,
+    )
+    assert np.array_equal(expanded.design_map, [-1, 0, 0, -1, 0, 1, -1, 1, 1])
