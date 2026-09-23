@@ -158,31 +158,3 @@ def build_guard_design(
         for name in ctx.names(op_point_params=True):
             guard_design[name] = getattr(ctx, name).flatten()[0]
     return guard_design
-
-
-# NOTE: This functions are implemented but not used.
-# They might be helpful if we decide to support parallel runs
-# from directly within python
-def prepend_design(caselist: CaseList, design: dict[str, float]) -> CaseList:
-    new_data = {}
-    for name, values in caselist.parameters.items():
-        new_data[name] = np.concatenate([[design[name]], values])
-    return CaseList(new_data)
-
-
-def packetize(caselist: CaseList, packet_size: int):
-    n = caselist.size
-    for start in range(0, n, packet_size):
-        end = min(start + packet_size, n)
-        yield caselist.slice(start, end)
-
-
-def prepare_packets(caselist, packet_size, guard_design):
-    for packet in packetize(caselist, packet_size):
-        yield prepend_design(packet, guard_design)
-
-
-@dataclass
-class Packet:
-    caselist: CaseList
-    original_indices: NDArray
