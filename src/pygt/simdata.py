@@ -5,6 +5,7 @@ from functools import cached_property
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from .cases import CaseList, ExpandedCaseList
 from .exceptions import MissingSignalError
@@ -22,10 +23,10 @@ class CaseStatus(StrEnum):
 class CaseData:
     case_id: int
     design_id: int
-    design_variables: dict[str, float | int | np.ndarray]
-    operating_point: dict[str, float | int | np.ndarray]
+    design_variables: dict[str, float | int | NDArray]
+    operating_point: dict[str, float | int | NDArray]
     index_name: str
-    signals: dict[str, np.ndarray]
+    signals: dict[str, NDArray]
     status: CaseStatus
     required_signals: list[str]
 
@@ -33,7 +34,7 @@ class CaseData:
     def _valid_signals(self):
         return [sig for sig in self.required_signals] + [self.index_name]
 
-    def get(self, signal: str) -> np.ndarray:
+    def get(self, signal: str) -> NDArray:
         if signal not in self._valid_signals:
             raise ValueError(
                 f'Signal "{signal}" is not an expected signal. Expected one of {self._valid_signals}'
@@ -45,10 +46,10 @@ class CaseData:
             )
         return out
 
-    def __getattr__(self, name: str) -> np.ndarray:
+    def __getattr__(self, name: str) -> NDArray:
         return self.resolve(name)
 
-    def resolve(self, name: str) -> np.ndarray:
+    def resolve(self, name: str) -> NDArray:
         # Design Variable?
         if name in self.design_variables:
             out = self.design_variables[name]
@@ -106,7 +107,7 @@ class DesignData:
     design_id: int
     cases: list[CaseData]
 
-    def get(self, signal: str) -> np.ndarray:
+    def get(self, signal: str) -> NDArray:
         return np.stack([case.get(signal) for case in self.cases], axis=-1)
 
     @property

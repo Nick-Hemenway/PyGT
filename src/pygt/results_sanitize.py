@@ -2,6 +2,7 @@ import logging
 from typing import Callable
 
 import numpy as np
+from numpy.typing import NDArray
 from scipy.interpolate import interp1d
 
 from .exceptions import MissingSignalError
@@ -47,7 +48,7 @@ class QDAResultsAlign:
             signals = [sig for sig in case.signals if self.signals(sig)]
         return signals
 
-    def center_of_mass(self, x: np.ndarray, y: np.ndarray) -> float:
+    def center_of_mass(self, x: NDArray, y: NDArray) -> float:
         z = np.dot(x, np.abs(y))
         total = np.sum(np.abs(y))
         if total == 0:
@@ -69,11 +70,11 @@ class QDAResultsAlign:
 
     def align_col(
         self,
-        x: np.ndarray,
-        y: np.ndarray,
+        x: NDArray,
+        y: NDArray,
         wrap_offset: float,
         angle_offset: float,
-    ) -> np.ndarray:
+    ) -> NDArray:
         f = interp1d(x, y, kind="linear", fill_value=0, bounds_error=False)
         return f(x - wrap_offset + angle_offset)
 

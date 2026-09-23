@@ -3,12 +3,13 @@ from dataclasses import dataclass
 from functools import cached_property
 
 import numpy as np
+from numpy.typing import NDArray
 from optwrap import Context, OperatingPoints, Registry
 
 logger = logging.getLogger(__name__)
 
 
-def index_map(cases: int, packet_size: int) -> np.ndarray:
+def index_map(cases: int, packet_size: int) -> NDArray:
     """
     Guard designs correspond to -1
     Original/real design indices are stored in other slots
@@ -50,11 +51,11 @@ class CaseList:
         return self.values[key]
 
     @cached_property
-    def index_map(self) -> np.ndarray:
+    def index_map(self) -> NDArray:
         return np.arange(self.size).astype(int)
 
     @cached_property
-    def design_map(self) -> np.ndarray:
+    def design_map(self) -> NDArray:
         if self.context.operating_points is None:
             return np.arange(self.size)
         npoints = self.context.operating_points.size
@@ -89,11 +90,11 @@ class ExpandedCaseList:
     guard_design: dict[str, float]
 
     @property
-    def real_mask(self) -> np.ndarray:
+    def real_mask(self) -> NDArray:
         return self.index_map >= 0
 
     @property
-    def guard_mask(self) -> np.ndarray:
+    def guard_mask(self) -> NDArray:
         return self.index_map < 0
 
     @cached_property
@@ -114,13 +115,13 @@ class ExpandedCaseList:
         return len(next(iter(self.values.values())))
 
     @cached_property
-    def index_map(self) -> np.ndarray:
+    def index_map(self) -> NDArray:
         return index_map(cases=self.caselist.size, packet_size=self.packet_size).astype(
             int
         )
 
     @cached_property
-    def design_map(self) -> np.ndarray:
+    def design_map(self) -> NDArray:
         out = np.empty(len(self.index_map))
         out[self.guard_mask] = -1
         out[self.real_mask] = self.caselist.design_map
@@ -156,4 +157,4 @@ def prepare_packets(caselist, packet_size, guard_design):
 @dataclass
 class Packet:
     caselist: CaseList
-    original_indices: np.ndarray
+    original_indices: NDArray

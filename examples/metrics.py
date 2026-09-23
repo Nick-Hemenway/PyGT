@@ -180,9 +180,7 @@ m = opt.AggregatedMetric(
     agg=opt.aggregate.Squeeze(),
 )
 
-between_ramps_int = Window(
-    Signal(Signals.INDEX), duration=Ref(Vars.INT_DURATION)
-)
+between_ramps_int = Window(Signal(Signals.INDEX), duration=Ref(Vars.INT_DURATION))
 reg.add_metric(m)
 
 m1 = opt.AggregatedMetric(
