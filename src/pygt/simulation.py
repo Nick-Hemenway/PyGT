@@ -303,7 +303,10 @@ class DistributedExecution(ExecutionStrategy):
 
     def submit(self, workspace: Workspace) -> CompletedProcess:
         cmds = self._build_submit_commands(workspace)
-        logger.info("Submitting distributed simulation")
+        logger.info(
+            "Submitting distributed simulation with %s licenses requested",
+            self.licenses,
+        )
         out = run_terminal_commands(
             cmds,
             stdout=workspace.logs_dir / "stdout_distributed_submit.log",

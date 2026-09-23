@@ -36,8 +36,13 @@ from pygt.workspace import (
     WorkspaceRepository,
 )
 
-plt.set_loglevel("WARNING")
-logging.basicConfig(level=logging.INFO, filename="./logs/metrics.log")
+plt.set_loglevel("INFO")
+logging.basicConfig(
+    level=logging.INFO,
+    filename="./logs/metrics.log",
+    format="%(asctime)s - %(levelname)s - %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 plt.style.use("bmh")
 
@@ -107,17 +112,20 @@ packet_size = int(popsize / licenses) + 1
 def simulate(expanded: ExpandedCaseList) -> None:
     DesignWriter().write_file(caselist=expanded, workspace=workspace)
     sim = SerialExecution()
-    sim = DistributedExecution(licenses=licenses, packet_size=packet_size)
+    sim = DistributedExecution(
+        licenses=expanded.packet_count,
+        packet_size=expanded.packet_size,
+    )
     _ = sim.run(workspace)
     DataExporter().export(workspace=workspace, export_spec=export_spec)
 
 
-reg.add_provider(opt.Provider(name="caselist", func=CaseList))
+reg.add_provider(opt.Provider(name="caselist", func=CaseList.from_context))
 reg.add_provider(
     opt.Provider(
         name="expanded",
-        func=lambda caselist: ExpandedCaseList(
-            caselist, packet_size=packet_size, guard_design=guard
+        func=lambda caselist: ExpandedCaseList.from_license_count(
+            caselist, guard_design=guard, licenses=licenses
         ),
     )
 )
