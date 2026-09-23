@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Self
+from typing import Any, Self
 
 import numpy as np
 from numpy.typing import NDArray
@@ -12,21 +12,64 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CaseList:
-    context: Context
+    design_variables: dict[str, NDArray]
+    params: dict[str, NDArray] | None = None
+    operating_points: dict[str, NDArray] | None = None
+    op_point_size: int | None = None
+    write_params: bool = True
 
-    @property
-    def _values(self):
-        out = {}
-        for key in self.context.names(vars=True, params=True):
-            out[key] = getattr(self.context, key)
-        if self.context.operating_points is not None:
-            for key in self.context.names(op_point_params=True):
-                out[key] = getattr(self.context, key)
-        return out
+    def __post_init__(self):
+        if (self.operating_points is not None) and (self.op_point_size is None):
+            raise ValueError(
+                '"op_point_size" must be provided if "operating_point_params" is not None'
+            )
+
+        # Ensure all arrays are at least 1D
+        self.design_variables = {
+            key: np.atleast_1d(val) for key, val in self.design_variables.items()
+        }
+        if self.params is not None:
+            self.params = {key: np.atleast_1d(val) for key, val in self.params.items()}
+        if self.operating_points is not None:
+            self.operating_points = {
+                key: np.atleast_1d(val) for key, val in self.operating_points.items()
+            }
+
+        # Ensure that size of arrays provided is divisible by number of operating points
+        if self.operating_points is not None:
+            design_count = self.size / self.op_point_size
+            if int(design_count) != design_count:
+                raise ValueError(
+                    "Total case count is not divisible by number of operating points"
+                )
 
     @cached_property
-    def values(self):
-        return {key: val.flatten(order="c") for key, val in self._values.items()}
+    def values(self) -> dict[str, np.ndarray]:
+        # Combine and broadcast all arrays
+        params = self.params
+        if params is None:
+            params = {}
+        op_points = self.operating_points
+        if op_points is None:
+            op_points = {}
+
+        if self.write_params:
+            combined = self.design_variables | params | op_points
+        else:
+            combined = self.design_variables | op_points
+
+        out = {}
+        try:
+            for key, arr in zip(
+                combined.keys(), np.broadcast_arrays(*combined.values())
+            ):
+                out[key] = arr
+        except ValueError as e:
+            raise ValueError(
+                "All operating point columns must have the same length."
+            ) from e
+        else:
+            return out
 
     @property
     def size(self):
@@ -41,15 +84,16 @@ class CaseList:
 
     @cached_property
     def design_map(self) -> NDArray:
-        if self.context.operating_points is None:
+        if self.operating_points is None:
             return np.arange(self.size)
-        npoints = self.context.operating_points.size
-        return np.repeat(np.arange(int(self.size / npoints)), npoints).astype(int)
+        return np.repeat(np.arange(self.design_count), self.op_point_size).astype(int)
 
     @property
     def design_count(self) -> int:
-        npoints = self.context.operating_points.size
-        return int(self.size / npoints)
+        if self.operating_points is None:
+            return self.size
+        else:
+            return int(self.size / self.op_point_size)
 
     def get_design_variables(self, case_id: int):
         params = {}
@@ -58,7 +102,7 @@ class CaseList:
         return params
 
     def get_operating_point(self, case_id: int):
-        if self.context.operating_points is None:
+        if self.operating_points is None:
             return {}
         params = {}
         for name in self.context.names(op_point_params=True):
@@ -76,11 +120,11 @@ class ExpandedCaseList:
         self.index_map = np.asarray(self.index_map)
 
     @property
-    def real_mask(self) -> NDArray:
+    def _real_mask(self) -> NDArray:
         return self.index_map >= 0
 
     @property
-    def guard_mask(self) -> NDArray:
+    def _guard_mask(self) -> NDArray:
         return self.index_map < 0
 
     @cached_property
@@ -88,8 +132,8 @@ class ExpandedCaseList:
         out = {}
         for key, arr in self.caselist.values.items():
             expanded = np.empty(len(self.index_map))
-            expanded[self.real_mask] = arr[self.index_map[self.real_mask]]
-            expanded[self.guard_mask] = self.guard_design[key]
+            expanded[self._real_mask] = arr[self.index_map[self._real_mask]]
+            expanded[self._guard_mask] = self.guard_design[key]
             out[key] = expanded
         return out
 
@@ -113,8 +157,8 @@ class ExpandedCaseList:
     @cached_property
     def design_map(self) -> NDArray:
         out = np.empty(len(self.index_map))
-        out[self.guard_mask] = -1
-        out[self.real_mask] = self.caselist.design_map
+        out[self._guard_mask] = -1
+        out[self._real_mask] = self.caselist.design_map
         return out.astype(int)
 
     @property
@@ -126,6 +170,36 @@ class ExpandedCaseList:
 
     def get_operating_point(self, case_id: int):
         return self.caselist.get_operating_point(case_id)
+
+
+def build_caselist(
+    context: Context, caselist_kwargs: dict[str, Any] | None = None
+) -> CaseList:
+    vars = {}
+    for key in context.names(vars=True):
+        vars[key] = np.asarray(getattr(context, key)).flatten(order="c")
+
+    params = {}
+    for key in context.names(params=True):
+        params[key] = np.asarray(getattr(context, key)).flatten(order="c")
+    if len(params) == 0:
+        params = None
+
+    op_points = None
+    op_point_size = None
+    if context.operating_points is not None:
+        op_point_size = context.operating_points.size
+        op_points = {}
+        for key in context.names(op_point_params=True):
+            op_points[key] = getattr(context, key)
+
+    return CaseList(
+        design_variables=vars,
+        params=params,
+        operating_points=op_points,
+        op_point_size=op_point_size,
+        **caselist_kwargs,
+    )
 
 
 def build_index_map(cases: int, packet_size: int) -> NDArray:
