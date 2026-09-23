@@ -109,6 +109,34 @@ class CaseList:
             params[name] = self.caselist.values[name][case_id]
         return params
 
+    @classmethod
+    def from_context(cls, context: Context, write_params: bool = True) -> Self:
+        vars = {}
+        for key in context.names(vars=True):
+            vars[key] = np.asarray(getattr(context, key)).flatten(order="c")
+
+        params = {}
+        for key in context.names(params=True):
+            params[key] = np.asarray(getattr(context, key)).flatten(order="c")
+        if len(params) == 0:
+            params = None
+
+        op_points = None
+        op_point_size = None
+        if context.operating_points is not None:
+            op_point_size = context.operating_points.size
+            op_points = {}
+            for key in context.names(op_point_params=True):
+                op_points[key] = getattr(context, key)
+
+        return cls(
+            design_variables=vars,
+            params=params,
+            operating_points=op_points,
+            op_point_size=op_point_size,
+            write_params=write_params,
+        )
+
 
 @dataclass
 class ExpandedCaseList:
@@ -170,36 +198,6 @@ class ExpandedCaseList:
 
     def get_operating_point(self, case_id: int):
         return self.caselist.get_operating_point(case_id)
-
-
-def build_caselist(
-    context: Context, caselist_kwargs: dict[str, Any] | None = None
-) -> CaseList:
-    vars = {}
-    for key in context.names(vars=True):
-        vars[key] = np.asarray(getattr(context, key)).flatten(order="c")
-
-    params = {}
-    for key in context.names(params=True):
-        params[key] = np.asarray(getattr(context, key)).flatten(order="c")
-    if len(params) == 0:
-        params = None
-
-    op_points = None
-    op_point_size = None
-    if context.operating_points is not None:
-        op_point_size = context.operating_points.size
-        op_points = {}
-        for key in context.names(op_point_params=True):
-            op_points[key] = getattr(context, key)
-
-    return CaseList(
-        design_variables=vars,
-        params=params,
-        operating_points=op_points,
-        op_point_size=op_point_size,
-        **caselist_kwargs,
-    )
 
 
 def build_index_map(cases: int, packet_size: int) -> NDArray:
