@@ -127,7 +127,7 @@ class CaseList:
             op_point_size = context.operating_points.size
             op_points = {}
             for key in context.names(op_point_params=True):
-                op_points[key] = getattr(context, key)
+                op_points[key] = np.asarray(getattr(context, key)).flatten(order="c")
 
         return cls(
             design_variables=vars,
