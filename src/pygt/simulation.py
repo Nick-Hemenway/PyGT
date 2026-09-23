@@ -18,6 +18,11 @@ class ExecutionStrategy(ABC):
         pass
 
 
+def _runtime_str(seconds: float):
+    m, s = divmod(seconds, 60)
+    return f"{m} minutes, {s} seconds"
+
+
 @dataclass
 class SerialExecutionResult:
     submit: CompletedProcess
@@ -25,13 +30,18 @@ class SerialExecutionResult:
 
     @property
     def runtime(self):
-        m, s = divmod(self.runtime_seconds, 60)
-        return f"{m} minutes, {s} seconds"
+        return _runtime_str(seconds=self.runtime_seconds)
 
 
 @dataclass
-class DistributedExecutionResult(SerialExecutionResult):
+class DistributedExecutionResult:
+    submit: CompletedProcess
     fetch: CompletedProcess
+    runtime_seconds: float
+
+    @property
+    def runtime(self):
+        return _runtime_str(seconds=self.runtime_seconds)
 
 
 @dataclass
