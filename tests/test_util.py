@@ -1,10 +1,10 @@
-import time
 from pathlib import Path
 
 import pytest
 
 from pygt.exceptions import FileNotUpdatedError
 from pygt.util import FileWatcher, retry
+from tests.helpers import RaiseNTimesBeforeReturn, write_slowly
 
 
 @pytest.fixture
@@ -15,21 +15,6 @@ def file1(tmp_path: Path) -> Path:
 @pytest.fixture
 def file2(tmp_path: Path) -> Path:
     return tmp_path / "test2.txt"
-
-
-class RaiseNTimesBeforeReturn:
-    def __init__(self, exception: Exception, count: int, val: float):
-        self.exception = exception
-        self.count = count
-        self.val = val
-        self.total_raised = 0
-
-    def __call__(self):
-        if self.total_raised < self.count:
-            self.total_raised += 1
-            raise self.exception
-        else:
-            return self.val
 
 
 def test_retry_single_exception_tuple():
@@ -59,6 +44,13 @@ def test_retry_single_exception_tries_too_low():
         f_retry()
 
 
+def test_retry_with_unexpected_exception():
+    f = RaiseNTimesBeforeReturn(exception=RuntimeError, count=3, val=10)
+    f_retry = retry(exceptions=(ValueError, KeyError), tries=10, delay=0)(f)
+    with pytest.raises(RuntimeError):
+        f_retry()
+
+
 def test_file_watcher_file_created(file1: Path):
     with FileWatcher(file1):
         file1.write_text("Test text")
@@ -72,8 +64,7 @@ def test_file_watcher_file_overwritten_with_same_content(file1: Path):
         # of when file was last modified. Test can fail occasionally
         # because file updates are so close to each other. This seems super
         # unlikely to happen in practical scenarios
-        time.sleep(0.001)
-        file1.write_text(message)
+        write_slowly(file1, message)
 
 
 def test_file_watcher_file_touched_but_only_read(file1: Path):
@@ -119,5 +110,5 @@ def test_file_watcher_both_file_overwritten_with_same_content(file1: Path, file2
     file1.write_text(message)
     file2.write_text(message)
     with FileWatcher([file1, file2]):
-        file1.write_text(message)
-        file2.write_text(message)
+        write_slowly(file1, message)
+        write_slowly(file2, message)
