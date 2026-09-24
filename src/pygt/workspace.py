@@ -208,11 +208,26 @@ class KeepRecentPolicy:
         return lst[0 : -self.keep]
 
 
+@dataclass
+class KeepAllPolicy:
+    def select_for_deletion(self, workspaces: list[Workspace]) -> list[Workspace]:
+        return []
+
+
 class WorkspaceRepository:
-    def __init__(self, root: Path | str, retention_policy: RetentionPolicy):
+    def __init__(
+        self, root: Path | str, retention_policy: RetentionPolicy | None = None
+    ):
         self.root = sanitize_path(root)
+        if retention_policy is None:
+            retention_policy = KeepAllPolicy()
         self.retention_policy = retention_policy
-        self._workspaces = {}
+        self._workspaces: dict[str, Workspace] = {}
+
+    def set_retention_policy(self, retention_policy: RetentionPolicy | None = None):
+        if retention_policy is None:
+            retention_policy = KeepAllPolicy()
+        self.retention_policy = retention_policy
 
     def refresh(self):
         logger.debug("WorspaceRepository being refreshed")
@@ -236,26 +251,29 @@ class WorkspaceRepository:
             workspace.cleanup()
         self.refresh()
 
-    @property
-    def _sorted(self):
+    def to_sorted_list(self) -> list[Workspace]:
         return sorted(self._workspaces.values(), key=lambda x: x.created)
 
-    def latest(self):
-        return self._sorted[-1]
-
-    def previous(self):
-        return self._sorted[-2]
-
-    def oldest(self):
-        return self._sorted[0]
-
-    def to_list(self):
+    def to_list(self) -> list[Workspace]:
         return list(self._workspaces.values())
 
-    def clean_all(self):
-        shutil.rmtree(self.root)
+    def latest(self) -> Workspace:
+        return self.to_sorted_list()[-1]
+
+    def previous(self) -> Workspace:
+        return self.to_sorted_list()[-2]
+
+    def oldest(self) -> Workspace:
+        return self.to_sorted_list()[0]
+
+    def clean_all(self) -> None:
+        for workspace in self._workspaces.values():
+            workspace.cleanup()
 
     def clean_oldest(self, n: int = 1):
-        paths = sorted(list(self.root.iterdir()))
+        ws = self.to_sorted_list()
         for i in range(n):
-            shutil.rmtree(paths[i])
+            ws[i].cleanup()
+
+    def __len__(self) -> int:
+        return len(self._workspaces)

@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 
 import pytest
@@ -67,6 +68,11 @@ def test_file_watcher_file_overwritten_with_same_content(file1: Path):
     message = "Test text"
     file1.write_text(message)
     with FileWatcher(file1):
+        # Add small amount of sleep because filewatcher looks at timestamp
+        # of when file was last modified. Test can fail occasionally
+        # because file updates are so close to each other. This seems super
+        # unlikely to happen in practical scenarios
+        time.sleep(0.001)
         file1.write_text(message)
 
 

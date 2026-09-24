@@ -4,6 +4,7 @@ import pytest
 
 import pygt
 from pygt import CaseList, ExpandedCaseList
+from pygt.cases import build_index_map
 
 
 @pytest.fixture
@@ -281,3 +282,16 @@ def test_expanded_caselist_design_map_from_licenses(
         licenses=3,
     )
     assert np.array_equal(expanded.design_map, [-1, 0, 0, -1, 0, 1, -1, 1, 1])
+
+
+@pytest.mark.parametrize(
+    "cases, packet_size, expected",
+    [
+        (6, 2, [-1, 0, -1, 1, -1, 2, -1, 3, -1, 4, -1, 5]),
+        (6, 4, [-1, 0, 1, 2, -1, 3, 4, 5]),
+        (6, 7, [-1, 0, 1, 2, 3, 4, 5]),
+    ],
+)
+def test_build_index_map(cases: int, packet_size: int, expected: list):
+    arr = build_index_map(cases=cases, packet_size=packet_size)
+    assert np.array_equal(arr, expected)
