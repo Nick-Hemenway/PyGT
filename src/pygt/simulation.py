@@ -4,8 +4,9 @@ from dataclasses import dataclass
 from subprocess import CompletedProcess
 from time import perf_counter
 
+from .base import ProcessRunner
 from .exceptions import FileNotUpdatedError, GTLicenseError
-from .terminal import run_terminal_commands
+from .terminal import SubprocessRunner
 from .util import FileWatcher, retry
 from .workspace import Workspace, WorkspaceRepository, WorkspaceStatus
 
@@ -18,30 +19,25 @@ class ExecutionStrategy(ABC):
         pass
 
 
-def _runtime_str(seconds: float):
-    m, s = divmod(seconds, 60)
-    return f"{m} minutes, {s} seconds"
-
-
 @dataclass
-class SerialExecutionResult:
-    submit: CompletedProcess
+class ExecutionResult:
     runtime_seconds: float
 
     @property
     def runtime(self):
-        return _runtime_str(seconds=self.runtime_seconds)
+        m, s = divmod(self.runtime_seconds, 60)
+        return f"{m} minutes, {s} seconds"
 
 
 @dataclass
-class DistributedExecutionResult:
+class SerialExecutionResult(ExecutionResult):
+    submit: CompletedProcess
+
+
+@dataclass
+class DistributedExecutionResult(ExecutionResult):
     submit: CompletedProcess
     fetch: CompletedProcess
-    runtime_seconds: float
-
-    @property
-    def runtime(self):
-        return _runtime_str(seconds=self.runtime_seconds)
 
 
 @dataclass
@@ -54,12 +50,15 @@ class SerialExecution(ExecutionStrategy):
     delay: float = 5
     backoff: float = 2
     max_delay: float = 600
+    runner: ProcessRunner | None = None
 
     def __post_init__(self):
         if self.other_flags is None:
             self.other_flags = []
         if not isinstance(self.other_flags, (list, tuple)):
             raise ValueError("other_flags must be list, tuple, or None")
+        if self.runner is None:
+            self.runner = SubprocessRunner()
 
     def _build_commands(self, workspace: Workspace) -> list:
         cmds = ["gtsuite"]
@@ -90,7 +89,7 @@ class SerialExecution(ExecutionStrategy):
         # Watch .glx file and make sure it's updated. Otherwise raise exception
         with FileWatcher(workspace.model_path.with_suffix(".glx")):
             start = perf_counter()
-            out = run_terminal_commands(
+            out = self.runner.run(
                 cmds,
                 stdout=workspace.logs_dir / "stdout_serial_run.log",
                 stderr=workspace.logs_dir / "stderr_serial_run.log",
@@ -141,7 +140,11 @@ class SerialExecution(ExecutionStrategy):
             return out
 
 
-def clean_distributed_run(workspace: Workspace) -> CompletedProcess:
+def clean_distributed_run(
+    workspace: Workspace, runner: ProcessRunner | None = None
+) -> CompletedProcess:
+    if runner is None:
+        runner = SubprocessRunner()
     cmds = [
         "gtsuite",
         "-localdistrib:delete",
@@ -151,7 +154,7 @@ def clean_distributed_run(workspace: Workspace) -> CompletedProcess:
     needs_clean_status = [WorkspaceStatus.FAILED, WorkspaceStatus.RUNNING]
     if workspace.status in needs_clean_status:
         logger.info("Starting deletion of local distributed simulation")
-        out = run_terminal_commands(
+        out = runner.run(
             cmds,
             stdout=workspace.logs_dir / "stdout_distributed_clean.log",
             stderr=workspace.logs_dir / "stderr_distributed_clean.log",
@@ -189,6 +192,7 @@ class DistributedExecution(ExecutionStrategy):
     delay: float = 5
     backoff: float = 2
     max_delay: float = 600
+    runner: ProcessRunner | None = None
 
     def __post_init__(self):
         if self.other_submit_flags is None:
@@ -199,6 +203,8 @@ class DistributedExecution(ExecutionStrategy):
             self.other_fetch_flags = []
         if not isinstance(self.other_fetch_flags, (list, tuple)):
             raise ValueError("other_fetch_flags must be list, tuple, or None")
+        if self.runner is None:
+            self.runner = SubprocessRunner()
 
     def _build_submit_commands(self, workspace: Workspace) -> list:
         cmds = ["gtsuite"]
@@ -307,7 +313,7 @@ class DistributedExecution(ExecutionStrategy):
             "Submitting distributed simulation with %s licenses requested",
             self.licenses,
         )
-        out = run_terminal_commands(
+        out = self.runner.run(
             cmds,
             stdout=workspace.logs_dir / "stdout_distributed_submit.log",
             stderr=workspace.logs_dir / "stderr_distributed_submit.log",
@@ -318,7 +324,7 @@ class DistributedExecution(ExecutionStrategy):
     def fetch(self, workspace: Workspace) -> CompletedProcess:
         logger.info("Fetching distributed simulation")
         cmds = self._build_fetch_commands(workspace)
-        out = run_terminal_commands(
+        out = self.runner.run(
             cmds,
             stdout=workspace.logs_dir / "stdout_distributed_fetch.log",
             stderr=workspace.logs_dir / "stderr_distributed_fetch.log",

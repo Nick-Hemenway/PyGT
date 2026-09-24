@@ -62,7 +62,7 @@ sampled_spec = SampledOutputSpec(
 
 root = "./runs/runs_integrated"
 factory = WorkspaceFactory(model_path="./gt_files/integrated.gtm", root=root)
-# workspace = factory.build(export_spec=export_spec)
+workspace = factory.build(export_spec=export_spec)
 
 repo = WorkspaceRepository(root=root, retention_policy=KeepRecentPolicy(keep=5))
 repo.refresh()

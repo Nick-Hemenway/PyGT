@@ -2,9 +2,10 @@ import logging
 from dataclasses import dataclass
 from subprocess import CompletedProcess
 
+from .base import ProcessRunner
 from .exceptions import FileNotUpdatedError, GTLicenseError
 from .output_spec import ExportSpec
-from .terminal import run_terminal_commands
+from .terminal import SubprocessRunner
 from .util import FileWatcher, retry
 from .workspace import Workspace, WorkspaceStatus
 
@@ -17,6 +18,11 @@ class DataExporter:
     delay: float = 5
     backoff: float = 2
     max_delay: float = 600
+    runner: ProcessRunner | None = None
+
+    def __post_init__(self):
+        if self.runner is None:
+            self.runner = SubprocessRunner()
 
     @staticmethod
     def _build_commands(workspace: Workspace, export_spec: ExportSpec) -> list:
@@ -33,7 +39,7 @@ class DataExporter:
     ) -> CompletedProcess:
         cmds = self._build_commands(workspace, export_spec)
         with FileWatcher(workspace.export_output_path(export_spec)):
-            out = run_terminal_commands(
+            out = self.runner.run(
                 cmds,
                 stdout=workspace.logs_dir
                 / f"stdout_export_spec_{export_spec.name}.log",

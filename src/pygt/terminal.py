@@ -9,7 +9,7 @@ from . import exceptions as exc
 logger = logging.getLogger(__name__)
 
 
-def validate_gt_outputs(result: subprocess.CompletedProcess):
+def raise_on_gt_errors(result: subprocess.CompletedProcess):
     stderr = result.stderr
     stdout = result.stdout
     cmds = result.args
@@ -59,25 +59,27 @@ def validate_gt_outputs(result: subprocess.CompletedProcess):
         )
 
 
-def run_terminal_commands(
-    cmds: list[str],
-    stdout: str | Path | None,
-    stderr: str | Path | None,
-) -> subprocess.CompletedProcess:
-    logger.info("Starting subprocess: %s", cmds)
-    start = perf_counter()
-    outputs = subprocess.run(cmds, capture_output=True, text=True, shell=True)
-    stop = perf_counter()
-    m, s = divmod(stop - start, 60)
-    logger.info("Subprocess complete")
-    logger.info("Runtime: %d minutes %.3f seconds", m, s)
-    if stdout is not None:
-        stdout = Path(stdout)
-        stdout.write_text(outputs.stdout)
-        logger.debug("Stdout logs written to %s", stdout)
-    if stderr is not None:
-        stderr = Path(stderr)
-        stderr.write_text(outputs.stderr)
-        logger.debug("Stderr logs written to %s", stderr)
-    validate_gt_outputs(outputs)
-    return outputs
+class SubprocessRunner:
+    def run(
+        self,
+        cmds: list[str],
+        stdout: str | Path | None,
+        stderr: str | Path | None,
+    ) -> subprocess.CompletedProcess:
+        logger.info("Starting subprocess: %s", cmds)
+        start = perf_counter()
+        outputs = subprocess.run(cmds, capture_output=True, text=True, shell=True)
+        stop = perf_counter()
+        m, s = divmod(stop - start, 60)
+        logger.info("Subprocess complete")
+        logger.info("Runtime: %d minutes %.3f seconds", m, s)
+        if stdout is not None:
+            stdout = Path(stdout)
+            stdout.write_text(outputs.stdout)
+            logger.debug("Stdout logs written to %s", stdout)
+        if stderr is not None:
+            stderr = Path(stderr)
+            stderr.write_text(outputs.stderr)
+            logger.debug("Stderr logs written to %s", stderr)
+        raise_on_gt_errors(outputs)
+        return outputs
