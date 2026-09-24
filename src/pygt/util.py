@@ -19,7 +19,7 @@ def sanitize_path(path: Path | str) -> Path:
 
 
 def retry(
-    exceptions: tuple[Exception],
+    exceptions: Exception | tuple[Exception],
     tries: int = 20,
     delay: float = 5,
     backoff: float = 2,
@@ -27,7 +27,7 @@ def retry(
     """Retry calling the decorated function using an exponential backoff.
 
     Args:
-        exceptions: A tuple of exception classes to catch.
+        exceptions: An Exception or tuple of exceptions to catch
         tries: Number of times to try (not retry) before giving up.
         delay: Initial delay between retries in seconds.
         backoff: Backoff multiplier e.g. value of 2 will make the delay double each retry.
@@ -35,8 +35,8 @@ def retry(
     Returns:
         The decorated function.
     """
-    if not isinstance(exceptions, tuple):
-        raise ValueError('"exceptions" must be a tuple of exceptions')
+    if isinstance(exceptions, Exception):
+        exceptions = (exceptions,)
 
     def deco_retry(f):
         @wraps(f)
