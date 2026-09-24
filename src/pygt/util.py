@@ -1,5 +1,5 @@
+import hashlib
 import logging
-import os
 import subprocess
 import time
 from functools import wraps
@@ -57,30 +57,42 @@ def retry(
     return deco_retry
 
 
+def file_hash(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def last_mod_time(path: Path) -> int:
+    if not path.exists():
+        return None
+    return path.stat().st_mtime_ns
+
+
 class FileWatcher:
     def __init__(self, paths: Path | str | list[Path | str]):
         if not isinstance(paths, list):
             paths = [paths]
         self.paths = [Path(p) for p in paths if p is not None]
         self.last_times = {}
+        self.last_hash = {}
 
     def __enter__(self):
-        for p in self.paths:
-            try:
-                self.last_times[p] = os.path.getmtime(p)
-            except FileNotFoundError:
-                self.last_times[p] = None
+        for path in self.paths:
+            self.last_times[path] = last_mod_time(path)
+            self.last_hash[path] = file_hash(path)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_value is not None:
             raise exc_value
-        for path, last_mod_time in self.last_times.items():
-            try:
-                new_time = os.path.getmtime(path)
-            except FileNotFoundError:
-                new_time = None
-            if new_time == last_mod_time:
+        for path in self.last_times.keys():
+            old_time = self.last_times[path]
+            old_hash = self.last_hash[path]
+            new_time = last_mod_time(path)
+            new_hash = file_hash(path)
+
+            if (new_time == old_time) and (new_hash == old_hash):
                 raise FileNotUpdatedError(
                     f"File {path.name} has not been updated!", path=path
                 )
