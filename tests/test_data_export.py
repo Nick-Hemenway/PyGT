@@ -7,19 +7,16 @@ import pytest
 
 from pygt import DataExporter, ExportSpec, Workspace
 from pygt.exceptions import FileNotUpdatedError, GTLicenseError
-from tests.helpers import RaiseNTimesBeforeReturn, write_slowly
+from tests.helpers import FunctionSwitch, WriteFile, raise_exception
 
 
 @dataclass
-class GTErrorRunner:
-    func: Callable
-    path_to_update: Path | None = None
+class MockGTRunner:
+    func: Callable[[], CompletedProcess]
 
     def run(
         self, cmds: list[str], stdout: str | Path | None, stderr: str | Path | None
     ) -> CompletedProcess:
-        if self.path_to_update is not None:
-            write_slowly(self.path_to_update, "some_text")
         return self.func()
 
 
@@ -34,27 +31,40 @@ def completed() -> CompletedProcess:
 
 
 @pytest.fixture
-def no_license_func(completed: CompletedProcess, license_failures: int) -> Callable:
-    return RaiseNTimesBeforeReturn(
-        exception=GTLicenseError,
-        count=license_failures,
-        val=completed,
-        exc_kwargs={"message": "test", "gt_info": ()},
+def license_exception(completed) -> GTLicenseError:
+    return GTLicenseError(message="", gt_info=completed)
+
+
+@pytest.fixture
+def no_license_runner(
+    workspace: Workspace,
+    export_spec1: ExportSpec,
+    completed: CompletedProcess,
+    license_failures: int,
+) -> MockGTRunner:
+    return MockGTRunner(
+        func=FunctionSwitch(
+            count=license_failures,
+            func1=lambda: raise_exception(
+                GTLicenseError(message="", gt_info=completed)
+            ),
+            func2=WriteFile(
+                file=workspace.export_output_path(export_spec1), return_val=completed
+            ),
+        )
     )
 
 
 def test_export_recovers_from_gt_license_error(
     workspace: Workspace,
     export_spec1: ExportSpec,
-    no_license_func: Callable,
     license_failures: int,
+    no_license_runner: MockGTRunner,
     completed: CompletedProcess,
 ):
-    runner = GTErrorRunner(
-        func=no_license_func,
-        path_to_update=workspace.export_output_path(export_spec1),
+    exporter = DataExporter(
+        delay=0, runner=no_license_runner, retries=license_failures + 1
     )
-    exporter = DataExporter(delay=0, runner=runner, retries=license_failures + 1)
     result = exporter.export(
         workspace=workspace,
         export_spec=export_spec1,
@@ -63,18 +73,43 @@ def test_export_recovers_from_gt_license_error(
     assert result == completed
 
 
+def test_export_fails_if_more_license_errors_than_retries(
+    workspace: Workspace,
+    export_spec1: ExportSpec,
+    license_failures: int,
+    no_license_runner: MockGTRunner,
+    completed: CompletedProcess,
+):
+    exporter = DataExporter(
+        delay=0, runner=no_license_runner, retries=license_failures - 1
+    )
+    with pytest.raises(GTLicenseError):
+        exporter.export(
+            workspace=workspace,
+            export_spec=export_spec1,
+            overwrite=True,
+        )
+
+
 def test_export_recovers_if_file_not_immediately_updated(
     workspace: Workspace,
     export_spec1: ExportSpec,
-    no_license_func: Callable,
-    license_failures: int,
     completed: CompletedProcess,
 ):
-    runner = GTErrorRunner(
-        func=no_license_func,
-        path_to_update=workspace.export_output_path(export_spec1),
+    def do_nothing():
+        pass
+
+    file_fail_count = 3
+    runner = MockGTRunner(
+        func=FunctionSwitch(
+            count=file_fail_count,
+            func1=do_nothing,
+            func2=WriteFile(
+                file=workspace.export_output_path(export_spec1), return_val=completed
+            ),
+        )
     )
-    exporter = DataExporter(delay=0, runner=runner, retries=license_failures + 1)
+    exporter = DataExporter(delay=0, runner=runner, retries=file_fail_count + 1)
     result = exporter.export(
         workspace=workspace,
         export_spec=export_spec1,
@@ -86,13 +121,16 @@ def test_export_recovers_if_file_not_immediately_updated(
 def test_export_raises_error_if_file_never_updated(
     workspace: Workspace,
     export_spec1: ExportSpec,
-    no_license_func: Callable,
     license_failures: int,
+    completed: CompletedProcess,
 ):
-    # Exporter told to retry more times than GTLicenseError is raised,
-    # but the file is never updated so it still raises an error
-    runner = GTErrorRunner(
-        func=no_license_func,
+    # Eventually aquire GT license but file still never updated
+    runner = MockGTRunner(
+        func=FunctionSwitch.raise_exception_n_times(
+            exc=GTLicenseError(message="", gt_info=completed),
+            count=license_failures,
+            return_val=completed,
+        )
     )
     exporter = DataExporter(delay=0, runner=runner, retries=license_failures + 1)
     with pytest.raises(FileNotUpdatedError):
@@ -101,69 +139,3 @@ def test_export_raises_error_if_file_never_updated(
             export_spec=export_spec1,
             overwrite=True,
         )
-
-
-# def test_retry_export_on_file_not_updated_error(
-#     workspace: Workspace,
-#     export_spec1: ExportSpec,
-#     no_license_func: Callable,
-#     license_failures: int,
-#     completed: CompletedProcess,
-# ):
-#     runner = GTErrorRunner(
-#         func=no_license_func,
-#         path_to_update=workspace.export_output_path(export_spec1),
-#     )
-#     exporter = DataExporter(delay=0, runner=runner, retries=license_failures+1)
-#     result = exporter.export(
-#         workspace=workspace,
-#         export_spec=export_spec1,
-#         overwrite=True,
-#     )
-#     assert result == completed
-
-
-# def test_retry_export_on_file_not_updated_error(
-#     workspace: Workspace, export_spec1: ExportSpec
-# ):
-#     out = CompletedProcess(args=(), returncode=1)
-#     f = RaiseNTimesBeforeReturn(
-#         exception=GTLicenseError,
-#         count=3,
-#         val=out,
-#         exc_kwargs={"message": "test", "gt_info": ()},
-#     )
-#     runner = GTErrorRunner(
-#         func=f,
-#         path_to_update=workspace.export_output_path(export_spec1),
-#         update_results_file=True,
-#     )
-#     exporter = DataExporter(delay=0, runner=runner, retries=10)
-#     result = exporter.export(
-#         workspace=workspace,
-#         export_spec=export_spec1,
-#         overwrite=True,
-#     )
-#     assert result == out
-
-
-# def test_export_raises_error_if_file_never_updated(
-#     workspace: Workspace, export_spec1: ExportSpec
-# ):
-#     # GTLicenseError only raised 3 times
-#     # Exporter told to retry 5 times, but the file
-#     # is never updated
-#     out = CompletedProcess(args=(), returncode=1)
-
-#     runner = GTErrorRunner(
-#         func=f,
-#         path_to_update=workspace.export_output_path(export_spec1),
-#         update_results_file=False,
-#     )
-#     exporter = DataExporter(delay=0, runner=runner, retries=5)
-#     with pytest.raises(FileNotUpdatedError):
-#         exporter.export(
-#             workspace=workspace,
-#             export_spec=export_spec1,
-#             overwrite=True,
-#         )

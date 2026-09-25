@@ -4,7 +4,7 @@ import pytest
 
 from pygt.exceptions import FileNotUpdatedError
 from pygt.util import FileWatcher, retry
-from tests.helpers import RaiseNTimesBeforeReturn, write_slowly
+from tests.helpers import FunctionSwitch, write_slowly
 
 
 @pytest.fixture
@@ -17,20 +17,24 @@ def file2(tmp_path: Path) -> Path:
     return tmp_path / "test2.txt"
 
 
+def raise_exception(exc: Exception):
+    raise exc
+
+
 def test_retry_single_exception_tuple():
-    f = RaiseNTimesBeforeReturn(exception=ValueError, count=4, val=10)
+    f = FunctionSwitch.raise_exception_n_times(exc=ValueError(), count=4, return_val=10)
     f_retry = retry(exceptions=(ValueError,), tries=20, delay=0)(f)
     assert f_retry() == 10
 
 
 def test_retry_single_exception():
-    f = RaiseNTimesBeforeReturn(exception=ValueError, count=4, val=10)
+    f = FunctionSwitch.raise_exception_n_times(exc=ValueError(), count=4, return_val=10)
     f_retry = retry(exceptions=ValueError, tries=20, delay=0)(f)
     assert f_retry() == 10
 
 
 def test_retry_multiple_exception():
-    f = RaiseNTimesBeforeReturn(exception=ValueError, count=4, val=10)
+    f = FunctionSwitch.raise_exception_n_times(exc=ValueError(), count=4, return_val=10)
     f_retry = retry(
         exceptions=(RuntimeError, ValueError, AttributeError), tries=20, delay=0
     )(f)
@@ -38,14 +42,14 @@ def test_retry_multiple_exception():
 
 
 def test_retry_single_exception_tries_too_low():
-    f = RaiseNTimesBeforeReturn(exception=ValueError, count=6, val=10)
+    f = FunctionSwitch.raise_exception_n_times(exc=ValueError(), count=6, return_val=10)
     f_retry = retry(exceptions=ValueError, tries=4, delay=0)(f)
     with pytest.raises(ValueError):
         f_retry()
 
 
 def test_retry_with_unexpected_exception():
-    f = RaiseNTimesBeforeReturn(exception=RuntimeError, count=3, val=10)
+    f = FunctionSwitch.raise_exception_n_times(exc=RuntimeError, count=3, return_val=10)
     f_retry = retry(exceptions=(ValueError, KeyError), tries=10, delay=0)(f)
     with pytest.raises(RuntimeError):
         f_retry()

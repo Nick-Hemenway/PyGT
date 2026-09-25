@@ -66,7 +66,12 @@ def file_hash(path: Path) -> str | None:
 def last_mod_time(path: Path) -> int:
     if not path.exists():
         return None
-    return path.stat().st_mtime_ns
+    stat = path.stat()
+    return (
+        stat.st_mtime_ns,
+        stat.st_ctime_ns,
+        stat.st_size,
+    )
 
 
 class FileWatcher:
