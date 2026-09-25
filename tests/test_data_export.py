@@ -1,4 +1,5 @@
 from contextlib import nullcontext
+from pathlib import Path
 from subprocess import CompletedProcess
 from unittest.mock import MagicMock, patch
 
@@ -47,6 +48,20 @@ def test_export_recovers_from_gt_license_error(
         )
     assert result == completed
     assert mock_runner.run.call_count == 3
+
+
+def test_export_shares_log_file_locations_as_path(
+    mock_runner: MagicMock,
+    completed: CompletedProcess,
+    workspace: Workspace,
+    export_spec1: ExportSpec,
+):
+    mock_runner.run.return_value = completed
+    exporter = DataExporter(retries=1, runner=mock_runner)
+    with patch("pygt.data_export.RequireFileTouch", return_value=nullcontext()):
+        exporter.export(workspace=workspace, export_spec=export_spec1, overwrite=True)
+    assert isinstance(mock_runner.run.call_args.kwargs["stdout"], Path)
+    assert isinstance(mock_runner.run.call_args.kwargs["stderr"], Path)
 
 
 def test_export_fails_if_more_license_errors_than_retries(
