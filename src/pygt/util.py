@@ -1,9 +1,12 @@
 import hashlib
 import logging
+import shutil
 import subprocess
 import time
+from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from .exceptions import FileNotUpdatedError
 
@@ -74,11 +77,9 @@ def last_mod_time(path: Path) -> int:
     )
 
 
-class FileWatcher:
-    def __init__(self, paths: Path | str | list[Path | str]):
-        if not isinstance(paths, list):
-            paths = [paths]
-        self.paths = [Path(p) for p in paths if p is not None]
+class RequireFileTouch:
+    def __init__(self, *paths: Path | str):
+        self.paths = [Path(p) for p in paths]
         self.last_times = {}
         self.last_hash = {}
 
@@ -97,7 +98,111 @@ class FileWatcher:
             new_time = last_mod_time(path)
             new_hash = file_hash(path)
 
+            print("inside".center(100, "#"))
+            print(f"{new_time}".center(100, "#"))
+            print(f"{old_time}".center(100, "#"))
             if (new_time == old_time) and (new_hash == old_hash):
                 raise FileNotUpdatedError(
                     f"File {path.name} has not been updated!", path=path
                 )
+
+
+@dataclass
+class _FileState:
+    path: Path
+    original_existed: bool
+    backup_path: Path | None
+
+
+class RequireFileCreation:
+    """
+    Ensure one or more files are created (or recreated) within the context.
+
+    Existing files are moved aside before entering the context. New files
+    must be created at the original locations while inside the context.
+
+    Examples
+    --------
+    with RequireFileCreation(
+        "results.dat",
+        "summary.json",
+        "log.txt",
+    ):
+        simulation.run()
+    """
+
+    def __init__(self, *paths: str | Path):
+        if not paths:
+            raise ValueError("At least one path must be provided.")
+
+        self._paths = [Path(p) for p in paths]
+        self._temp_dir: TemporaryDirectory | None = None
+        self._states: dict[Path, _FileState] = {}
+
+    def __enter__(self):
+        self._temp_dir = TemporaryDirectory()
+        temp_dir = Path(self._temp_dir.name)
+
+        for path in self._paths:
+            if path.exists():
+                backup_path = temp_dir / path.name
+
+                # Avoid collisions if two watched files have the same name.
+                counter = 1
+                while backup_path.exists():
+                    backup_path = temp_dir / f"{counter}_{path.name}"
+                    counter += 1
+
+                shutil.move(path, backup_path)
+
+                self._states[path] = _FileState(
+                    path=path,
+                    original_existed=True,
+                    backup_path=backup_path,
+                )
+            else:
+                self._states[path] = _FileState(
+                    path=path,
+                    original_existed=False,
+                    backup_path=None,
+                )
+
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        try:
+            # Restore originals if the body of the context failed.
+            if exc_type is not None:
+                if exc_type is FileNotFoundError:
+                    raise RuntimeError(
+                        "Trying to load file that has been moved inside context RequireFileCreation context"
+                    ) from exc_value
+                self._restore_all()
+                return False
+
+            missing = [str(path) for path in self._paths if not path.exists()]
+
+            if missing:
+                self._restore_all()
+
+                raise FileNotUpdatedError(
+                    "Expected the following files to be created: " + ", ".join(missing)
+                )
+
+            return False
+
+        finally:
+            if self._temp_dir is not None:
+                self._temp_dir.cleanup()
+
+    def _restore_all(self):
+        for state in self._states.values():
+            if (
+                state.original_existed
+                and state.backup_path is not None
+                and state.backup_path.exists()
+            ):
+                if state.path.exists():
+                    state.path.unlink()
+
+                shutil.move(state.backup_path, state.path)

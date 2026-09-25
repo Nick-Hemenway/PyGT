@@ -1,12 +1,6 @@
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Self
-
-
-def write_slowly(path: Path | str, text: str, delay: float = 0.001):
-    time.sleep(delay)
-    Path(path).write_text(text)
 
 
 def raise_exception(exc: Exception):

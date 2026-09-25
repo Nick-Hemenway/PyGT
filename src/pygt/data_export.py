@@ -6,7 +6,7 @@ from .base import ProcessRunner
 from .exceptions import FileNotUpdatedError, GTLicenseError
 from .output_spec import ExportSpec
 from .terminal import SubprocessRunner
-from .util import FileWatcher, retry
+from .util import RequireFileTouch, retry
 from .workspace import Workspace, WorkspaceStatus
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class DataExporter:
         self, workspace: Workspace, export_spec: ExportSpec
     ) -> CompletedProcess:
         cmds = self._build_commands(workspace, export_spec)
-        with FileWatcher(workspace.export_output_path(export_spec)):
+        with RequireFileTouch(workspace.export_output_path(export_spec)):
             out = self.runner.run(
                 cmds,
                 stdout=workspace.logs_dir

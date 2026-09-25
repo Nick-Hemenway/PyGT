@@ -7,7 +7,7 @@ from time import perf_counter
 from .base import ProcessRunner
 from .exceptions import FileNotUpdatedError, GTLicenseError
 from .terminal import SubprocessRunner
-from .util import FileWatcher, retry
+from .util import RequireFileTouch, retry
 from .workspace import Workspace, WorkspaceRepository, WorkspaceStatus
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ class SerialExecution(ExecutionStrategy):
             )
         cmds = self._build_commands(workspace)
         # Watch .glx file and make sure it's updated. Otherwise raise exception
-        with FileWatcher(workspace.model_path.with_suffix(".glx")):
+        with RequireFileTouch(workspace.model_path.with_suffix(".glx")):
             start = perf_counter()
             out = self.runner.run(
                 cmds,
@@ -256,7 +256,7 @@ class DistributedExecution(ExecutionStrategy):
                 )
             )
         # Watch .glx file and make sure it's updated. Otherwise raise exception
-        with FileWatcher(workspace.model_path.with_suffix(".glx")):
+        with RequireFileTouch(workspace.model_path.with_suffix(".glx")):
             start = perf_counter()
             submit_result = self.submit(workspace)
             workspace.mark_running()
