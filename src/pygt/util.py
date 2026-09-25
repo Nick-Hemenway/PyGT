@@ -98,9 +98,6 @@ class RequireFileTouch:
             new_time = last_mod_time(path)
             new_hash = file_hash(path)
 
-            print("inside".center(100, "#"))
-            print(f"{new_time}".center(100, "#"))
-            print(f"{old_time}".center(100, "#"))
             if (new_time == old_time) and (new_hash == old_hash):
                 raise FileNotUpdatedError(
                     f"File {path.name} has not been updated!", path=path

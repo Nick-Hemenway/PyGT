@@ -20,8 +20,8 @@ def file2(tmp_path: Path) -> Path:
     return tmp_path / "test2.txt"
 
 
-def raise_exception(exc: Exception):
-    raise exc
+def zero_return(*args, **kwargs) -> None:
+    return 0
 
 
 # ---------------------------------------------------------------------------- #
@@ -30,34 +30,51 @@ def raise_exception(exc: Exception):
 
 
 def test_retry_single_exception_tuple():
-    f = FunctionSwitch.raise_exception_n_times(exc=ValueError(), count=4, return_val=10)
+    f = FunctionSwitch.delayed_action(count=2, func=zero_return, exc=ValueError())
     f_retry = retry(exceptions=(ValueError,), tries=20, delay=0)(f)
-    assert f_retry() == 10
+    assert f_retry() == 0
 
 
 def test_retry_single_exception():
-    f = FunctionSwitch.raise_exception_n_times(exc=ValueError(), count=4, return_val=10)
+    f = FunctionSwitch.delayed_action(count=2, func=zero_return, exc=ValueError())
     f_retry = retry(exceptions=ValueError, tries=20, delay=0)(f)
-    assert f_retry() == 10
+    assert f_retry() == 0
 
 
 def test_retry_multiple_exception():
-    f = FunctionSwitch.raise_exception_n_times(exc=ValueError(), count=4, return_val=10)
+    f = FunctionSwitch.delayed_action(count=2, func=zero_return, exc=ValueError())
     f_retry = retry(
         exceptions=(RuntimeError, ValueError, AttributeError), tries=20, delay=0
     )(f)
-    assert f_retry() == 10
+    assert f_retry() == 0
+
+
+def test_retry_multiple_exception_different_raises():
+    def raise_exc(exc: Exception):
+        raise exc
+
+    f = FunctionSwitch(
+        count=2,
+        func1=lambda *args, **kwargs: raise_exc(RuntimeError),
+        func2=FunctionSwitch.delayed_action(
+            count=2, func=zero_return, exc=ValueError()
+        ),
+    )
+    f_retry = retry(
+        exceptions=(RuntimeError, ValueError, AttributeError), tries=20, delay=0
+    )(f)
+    assert f_retry() == 0
 
 
 def test_retry_single_exception_tries_too_low():
-    f = FunctionSwitch.raise_exception_n_times(exc=ValueError(), count=6, return_val=10)
-    f_retry = retry(exceptions=ValueError, tries=4, delay=0)(f)
+    f = FunctionSwitch.delayed_action(count=3, func=zero_return, exc=ValueError())
+    f_retry = retry(exceptions=ValueError, tries=2, delay=0)(f)
     with pytest.raises(ValueError):
         f_retry()
 
 
 def test_retry_with_unexpected_exception():
-    f = FunctionSwitch.raise_exception_n_times(exc=RuntimeError, count=3, return_val=10)
+    f = FunctionSwitch.delayed_action(count=3, func=zero_return, exc=RuntimeError())
     f_retry = retry(exceptions=(ValueError, KeyError), tries=10, delay=0)(f)
     with pytest.raises(RuntimeError):
         f_retry()

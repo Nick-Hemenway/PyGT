@@ -1,28 +1,13 @@
-from dataclasses import dataclass
-from pathlib import Path
+from contextlib import nullcontext
 from subprocess import CompletedProcess
-from typing import Callable
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from pygt import DataExporter, ExportSpec, Workspace
+from pygt.base import ProcessRunner
 from pygt.exceptions import FileNotUpdatedError, GTLicenseError
-from tests.helpers import FunctionSwitch, WriteFile, raise_exception
-
-
-@dataclass
-class MockGTRunner:
-    func: Callable[[], CompletedProcess]
-
-    def run(
-        self, cmds: list[str], stdout: str | Path | None, stderr: str | Path | None
-    ) -> CompletedProcess:
-        return self.func()
-
-
-@pytest.fixture
-def license_failures() -> int:
-    return 3
+from tests.helpers import FunctionSwitch, WriteFile
 
 
 @pytest.fixture
@@ -36,53 +21,42 @@ def license_exception(completed) -> GTLicenseError:
 
 
 @pytest.fixture
-def no_license_runner(
-    workspace: Workspace,
-    export_spec1: ExportSpec,
-    completed: CompletedProcess,
-    license_failures: int,
-) -> MockGTRunner:
-    return MockGTRunner(
-        func=FunctionSwitch(
-            count=license_failures,
-            func1=lambda: raise_exception(
-                GTLicenseError(message="", gt_info=completed)
-            ),
-            func2=WriteFile(
-                file=workspace.export_output_path(export_spec1), return_val=completed
-            ),
-        )
-    )
+def mock_runner() -> MagicMock:
+    return MagicMock(spec=ProcessRunner)
 
 
 def test_export_recovers_from_gt_license_error(
     workspace: Workspace,
     export_spec1: ExportSpec,
-    license_failures: int,
-    no_license_runner: MockGTRunner,
     completed: CompletedProcess,
+    mock_runner: MagicMock,
+    license_exception: GTLicenseError,
 ):
-    exporter = DataExporter(
-        delay=0, runner=no_license_runner, retries=license_failures + 1
+    mock_runner.run.side_effect = FunctionSwitch.delayed_action(
+        count=2,
+        func=lambda *args, **kwargs: completed,
+        exc=license_exception,
     )
-    result = exporter.export(
-        workspace=workspace,
-        export_spec=export_spec1,
-        overwrite=True,
-    )
+    exporter = DataExporter(delay=0, runner=mock_runner, retries=3)
+
+    with patch("pygt.data_export.RequireFileTouch", return_value=nullcontext()):
+        result = exporter.export(
+            workspace=workspace,
+            export_spec=export_spec1,
+            overwrite=True,
+        )
     assert result == completed
+    assert mock_runner.run.call_count == 3
 
 
 def test_export_fails_if_more_license_errors_than_retries(
-    workspace: Workspace,
     export_spec1: ExportSpec,
-    license_failures: int,
-    no_license_runner: MockGTRunner,
-    completed: CompletedProcess,
+    license_exception: GTLicenseError,
+    mock_runner: MagicMock,
+    workspace: Workspace,
 ):
-    exporter = DataExporter(
-        delay=0, runner=no_license_runner, retries=license_failures - 1
-    )
+    mock_runner.run.side_effect = license_exception
+    exporter = DataExporter(delay=0, runner=mock_runner, retries=3)
     with pytest.raises(GTLicenseError):
         exporter.export(
             workspace=workspace,
@@ -95,21 +69,16 @@ def test_export_recovers_if_file_not_immediately_updated(
     workspace: Workspace,
     export_spec1: ExportSpec,
     completed: CompletedProcess,
+    mock_runner: MagicMock,
 ):
-    def do_nothing():
-        pass
-
-    file_fail_count = 3
-    runner = MockGTRunner(
-        func=FunctionSwitch(
-            count=file_fail_count,
-            func1=do_nothing,
-            func2=WriteFile(
-                file=workspace.export_output_path(export_spec1), return_val=completed
-            ),
-        )
+    file_fail_count = 2
+    mock_runner.run.side_effect = FunctionSwitch.delayed_action(
+        count=file_fail_count,
+        func=WriteFile(
+            file=workspace.export_output_path(export_spec1), return_val=completed
+        ),
     )
-    exporter = DataExporter(delay=0, runner=runner, retries=file_fail_count + 1)
+    exporter = DataExporter(delay=0, runner=mock_runner, retries=file_fail_count + 1)
     result = exporter.export(
         workspace=workspace,
         export_spec=export_spec1,
@@ -121,18 +90,10 @@ def test_export_recovers_if_file_not_immediately_updated(
 def test_export_raises_error_if_file_never_updated(
     workspace: Workspace,
     export_spec1: ExportSpec,
-    license_failures: int,
-    completed: CompletedProcess,
+    mock_runner: MagicMock,
 ):
-    # Eventually aquire GT license but file still never updated
-    runner = MockGTRunner(
-        func=FunctionSwitch.raise_exception_n_times(
-            exc=GTLicenseError(message="", gt_info=completed),
-            count=license_failures,
-            return_val=completed,
-        )
-    )
-    exporter = DataExporter(delay=0, runner=runner, retries=license_failures + 1)
+    mock_runner.run.return_value = None
+    exporter = DataExporter(delay=0, runner=mock_runner, retries=3)
     with pytest.raises(FileNotUpdatedError):
         exporter.export(
             workspace=workspace,

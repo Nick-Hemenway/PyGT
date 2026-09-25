@@ -1,10 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Self
-
-
-def raise_exception(exc: Exception):
-    raise exc
+from typing import Any, Callable
 
 
 @dataclass
@@ -12,7 +8,7 @@ class WriteFile:
     file: Path
     return_val: Any
 
-    def __call__(self):
+    def __call__(self, *args, **kwargs):
         self.file.write_text("some text")
         return self.return_val
 
@@ -26,22 +22,30 @@ class FunctionSwitch:
     def __post_init__(self):
         self.total = 0
 
-    def __call__(self):
+    def __call__(self, *args, **kwargs):
         if self.total < self.count:
             self.total += 1
-            return self.func1()
+            return self.func1(*args, **kwargs)
         else:
-            return self.func2()
+            return self.func2(*args, **kwargs)
 
     @classmethod
-    def raise_exception_n_times(
-        cls, exc: Exception, count: int, return_val: Any
-    ) -> Self:
-        def func2():
-            return return_val
+    def delayed_action(cls, count: int, func: Callable, exc: Exception | None = None):
+        def do_nothing(*args, **kwargs):
+            pass
+
+        def raise_exception(exc: Exception):
+            raise exc
+
+        if exc is None:
+            func1 = do_nothing
+        else:
+
+            def func1(*args, **kwargs):
+                return raise_exception(exc)
 
         return cls(
             count=count,
-            func1=lambda: raise_exception(exc),
-            func2=func2,
+            func1=func1,
+            func2=func,
         )
