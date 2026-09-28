@@ -71,3 +71,16 @@ class MultiCaseEvaluator:
         for i in range(case_count):
             kwargs_list.append({key: val[i] for key, val in kwargs.items()})
         return kwargs_list
+
+
+def qda_op_point_index(rpms: list[float], qda_rpms: list[float]) -> int:
+    idx = None
+    for i, rpm in enumerate(rpms):
+        if rpm in qda_rpms:
+            idx = i
+            break
+    if idx is None:
+        raise ValueError(
+            "No rpm matches any of the qda rpms meaning the QDA results indices will be wrong!"
+        )
+    return idx

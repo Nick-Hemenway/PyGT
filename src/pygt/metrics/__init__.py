@@ -4,10 +4,14 @@ from .generic import (
 )
 from .util import (
     MultiCaseEvaluator,
+    qda_op_point_index,
 )
 
 __all__ = [
-    MultiCaseEvaluator,
+    # from generic.py
     signal_max,
     signal_min,
+    # util.py
+    MultiCaseEvaluator,
+    qda_op_point_index,
 ]
