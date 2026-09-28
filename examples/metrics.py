@@ -19,7 +19,7 @@ from pygt.cases import CaseList, ExpandedCaseList, build_guard_design
 from pygt.data_export import DataExporter
 from pygt.output_spec import ExportSpec, SampledOutputSpec
 from pygt.param_file import DesignWriter  # noqa
-from pygt.resolvers import Literal, Ref, Signal, Window
+from pygt.resolvers import Literal, Ref, ScalarExpand, Signal, Window
 from pygt.results_parse import (
     ExportedOutputParser,
     SampledOutputParser,
@@ -62,7 +62,7 @@ sampled_spec = SampledOutputSpec(
 
 root = "./runs/runs_integrated"
 factory = WorkspaceFactory(model_path="./gt_files/integrated.gtm", root=root)
-workspace = factory.build(export_spec=export_spec)
+# workspace = factory.build(export_spec=export_spec)
 
 repo = WorkspaceRepository(root=root, retention_policy=KeepRecentPolicy(keep=5))
 repo.refresh()
@@ -347,8 +347,14 @@ m7 = opt.Metric(
     ),
 )
 
+reg.add_provider(
+    opt.Provider(name="scalar", func=lambda x: x, arg_map={"x": Literal(5)})
+)
+
 
 ctx = reg.context_physical(x1, operating_points=op_points)
+
+print(ScalarExpand("scalar", count=10).resolve(ctx))
 
 print(ctx.int_contact_pressure)
 
@@ -362,11 +368,4 @@ print(m6.evaluate(ctx))
 
 print("\ntheta6 resolved:", theta6_int_case_resolver.resolve(ctx.case_data[0]))
 
-
-# # # TODO: Create function that gets operating point rpms and qda rpm list and returns
-# # # TODO: index to extract qda results from such that they are correct
-# TODO: Should we use RoC effective of knife edge?
-# TODO: Add ScalarExpand() resolver to expand scalar to number of cases. This would allow scalar providers
-# to be used as input to multicaseevaluator
-#
-# TODO: Make sure we can run sims with guard design and no operating points
+logging.shutdown()
