@@ -6,44 +6,44 @@ logger = logging.getLogger(__name__)
 
 
 class GTError(Exception):
-    def __init__(self, message: str, gt_info: CompletedProcess):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
         self.message = message
         self.gt_info = gt_info
         super().__init__(self.message)
 
 
 class GTLicenseError(GTError):
-    def __init__(self, message: str, gt_info: CompletedProcess):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
         super().__init__(message, gt_info)
 
 
 class GTFirstCaseFailedError(GTError):
-    def __init__(self, message: str, gt_info: CompletedProcess):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
         super().__init__(message, gt_info)
 
 
 class GTFailedExecution(GTError):
-    def __init__(self, message: str, gt_info: CompletedProcess):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
         super().__init__(message, gt_info)
 
 
 class GTFatalError(GTError):
-    def __init__(self, message: str, gt_info: CompletedProcess):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
         super().__init__(message, gt_info)
 
 
 class GTDistributedSubmissionFail(GTError):
-    def __init__(self, message: str, gt_info: CompletedProcess):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
         super().__init__(message, gt_info)
 
 
 class GTDistributedFetchFail(GTError):
-    def __init__(self, message: str, gt_info: CompletedProcess):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
         super().__init__(message, gt_info)
 
 
 class GTNotFoundError(GTError):
-    def __init__(self, message: str, gt_info: CompletedProcess):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
         super().__init__(message, gt_info)
 
 

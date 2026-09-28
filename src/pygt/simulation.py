@@ -5,6 +5,7 @@ from subprocess import CompletedProcess
 from time import perf_counter
 
 from .base import ProcessRunner
+from .error_check import raise_on_sim_out_file_errors
 from .exceptions import FileNotUpdatedError, GTLicenseError
 from .terminal import SubprocessRunner
 from .util import RequireFileTouch, retry
@@ -94,6 +95,7 @@ class SerialExecution(ExecutionStrategy):
                 stdout=workspace.logs_dir / "stdout_serial_run.log",
                 stderr=workspace.logs_dir / "stderr_serial_run.log",
             )
+            raise_on_sim_out_file_errors(workspace=workspace)
             stop = perf_counter()
 
         return SerialExecutionResult(
@@ -261,6 +263,7 @@ class DistributedExecution(ExecutionStrategy):
             submit_result = self.submit(workspace)
             workspace.mark_running()
             fetch_result = self.fetch(workspace)
+            raise_on_sim_out_file_errors(workspace=workspace)
             stop = perf_counter()
         return DistributedExecutionResult(
             submit=submit_result,
