@@ -1,3 +1,4 @@
+from . import cam
 from .generic import (
     signal_max,
     signal_min,
@@ -8,6 +9,8 @@ from .util import (
 )
 
 __all__ = [
+    # from package
+    cam,
     # from generic.py
     signal_max,
     signal_min,

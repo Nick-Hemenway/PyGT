@@ -129,3 +129,14 @@ def first_lube_node_contact_pressure(
     # Evaluate pressure at first lube node
     pressure_func = CubicSpline(angle, pressure)
     return pressure_func(node_angle)
+
+
+def theta6(
+    duration: NDArray,
+    theta1: NDArray,
+    theta2: NDArray,
+    theta3: NDArray,
+    theta4: NDArray,
+    theta5: NDArray,
+) -> NDArray:
+    return duration / 2 - (theta1 + theta2 + theta3 + theta4 + theta5)
