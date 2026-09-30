@@ -43,4 +43,4 @@ dev = [
 ]
 
 [tool.uv.sources]
-optwrap = { git = "https://github.com/Mercury-PDE-DesignAnalysisGroup/Optimization-Abstraction-Layer", tag = "v7.0.0" }
+optwrap = { git = "https://github.com/Mercury-PDE-DesignAnalysisGroup/Optimization-Abstraction-Layer", tag = "v8.0.0" }
