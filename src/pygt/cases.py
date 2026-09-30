@@ -5,7 +5,7 @@ from typing import Self
 
 import numpy as np
 from numpy.typing import NDArray
-from optwrap import Context, OperatingPoints, Registry
+from optwrap import Context, OperatingPoints, Parameters, Registry
 
 logger = logging.getLogger(__name__)
 
@@ -266,10 +266,15 @@ def build_index_map(cases: int, packet_size: int) -> NDArray:
 def build_guard_design(
     registry: Registry,
     operating_points: OperatingPoints | None = None,
+    parameters: Parameters | None = None,
 ) -> dict[str, float]:
     # Create default design
     x0 = registry.pack()
-    ctx = registry.context_physical(x0, operating_points=operating_points)
+    ctx = registry.context_physical(
+        x0,
+        operating_points=operating_points,
+        parameters=parameters,
+    )
     guard_design = {}
     for name in ctx.names(vars=True, params=True):
         guard_design[name] = getattr(ctx, name).flatten()[0]
