@@ -1,102 +1,75 @@
-import abc
 from dataclasses import dataclass
-from typing import Callable
 
 import numpy as np
 from numpy.typing import NDArray
-from optwrap.resolvers import Resolver
+from optwrap.resolvers import AbstractResolver, Resolvable, Resolver, as_resolver
 
 from ..simdata import CaseData
-from .base import CaseDataResolver
 
-
-class SignalFilter(abc.ABC):
-    @abc.abstractmethod
-    def resolve(self, case: CaseData) -> NDArray[np.bool_]: ...
+type SignalMask = Resolver[CaseData, NDArray[np.bool_]]
 
 
 @dataclass
-class Signal(Resolver):
+class Signal(AbstractResolver[CaseData, NDArray]):
     name: str
-    where: SignalFilter | list[SignalFilter] | None = None
-    func: Callable | None = None
+    where: SignalMask | list[SignalMask] | None = None
 
     def resolve(self, case: CaseData) -> NDArray:
         sig = case.get(self.name)
-        mask = build_filter_mask(case, filters=self.where)
+        mask = build_signal_mask(case, masks=self.where)
         if mask is None:
-            out = sig
+            return sig
         else:
-            out = sig[mask]
-        if self.func is not None:
-            return self.func(out)
-        else:
-            return out
+            return sig[mask]
 
 
 @dataclass
-class Between(SignalFilter):
+class Between(AbstractResolver[CaseData, NDArray[np.bool_]]):
     name: Signal
-    lower: CaseDataResolver | float | int
-    upper: CaseDataResolver | float | int
+    lower: Resolvable[CaseData, float]
+    upper: Resolvable[CaseData, float]
 
     def __post_init__(self):
         if not isinstance(self.name, Signal):
             raise ValueError(f"{self.name} must be a Signal resolver")
-
-    def _lower(self, case: CaseData) -> float:
-        try:
-            return self.lower.resolve(case)
-        except AttributeError:
-            return self.lower
-
-    def _upper(self, case: CaseData) -> float:
-        try:
-            return self.upper.resolve(case)
-        except AttributeError:
-            return self.upper
+        self.lower = as_resolver(self.lower)
+        self.upper = as_resolver(self.upper)
 
     def resolve(self, case: CaseData) -> NDArray[np.bool_]:
+        lower = self.lower.resolve(case)
+        upper = self.upper.resolve(case)
         sig = self.name.resolve(case)
-        mask = (sig >= self._lower(case)) & (sig <= self._upper(case))
+        mask = (sig >= lower) & (sig <= upper)
         return mask
 
 
 @dataclass
-class Window(SignalFilter):
+class Window(AbstractResolver[CaseData, NDArray[np.bool_]]):
     name: Signal
-    duration: CaseDataResolver
+    duration: Resolvable[CaseData, float]
 
     def __post_init__(self):
         if not isinstance(self.name, Signal):
             raise ValueError(f"{self.name} must be a Signal resolver")
-
-    def _value(self, case: CaseData) -> float:
-        try:
-            return self.duration.resolve(case)
-        except AttributeError:
-            return self.duration
-
-    def _lower(self, case: CaseData) -> float:
-        return -self._value(case) / 2
-
-    def _upper(self, case: CaseData) -> float:
-        return self._value(case) / 2
+        self.duration = as_resolver(self.duration)
 
     def resolve(self, case: CaseData) -> NDArray[np.bool_]:
+        duration = self.duration.resolve(case)
+        lower = -duration / 2
+        upper = duration / 2
         sig = self.name.resolve(case)
-        mask = (sig >= self._lower(case)) & (sig <= self._upper(case))
+        mask = (sig >= lower) & (sig <= upper)
         return mask
 
 
-def build_filter_mask(
-    case: CaseData, filters: list[SignalFilter] | None = None
+def build_signal_mask(
+    case: CaseData, masks: list[SignalMask] | None = None
 ) -> NDArray[np.bool_]:
-    if filters is None:
+    if masks is None:
         return None
-    if not isinstance(filters, (list, tuple)):
-        filters = [filters]
-    masks = [filt.resolve(case) for filt in filters]
+    if not isinstance(masks, (list, tuple)):
+        masks = [masks]
+    masks = [mask.resolve(case) for mask in masks]
     mask = np.logical_and.reduce(masks)
     if not np.any(mask):
         raise ValueError(

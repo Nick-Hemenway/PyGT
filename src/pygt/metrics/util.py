@@ -1,9 +1,9 @@
 import logging
 from dataclasses import dataclass
-from typing import Callable
+from typing import Any, Callable
 
 import numpy as np
-import optwrap
+import optwrap as opt
 import optwrap.resolvers as rs
 
 from ..exceptions import MissingSignalError
@@ -15,13 +15,11 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MultiCaseEvaluator:
     func: Callable[..., float]
-    case_arg_map: dict[str, str | rs.Resolver]
-    context_arg_map: dict[str, str | rs.Resolver] | None = None
-    op_points_count: int | None = None
+    case_arg_map: dict[str, rs.Resolvable[CaseData, Any]]
+    context_arg_map: dict[str, rs.Resolvable[opt.Context, Any]] | None = None
+    op_points_count: rs.Resolvable[opt.Context, int] | None = None
 
-    def __call__(
-        self, case_data: list[CaseData], context: optwrap.Context | None = None
-    ):
+    def __call__(self, case_data: list[CaseData], context: opt.Context | None = None):
         res = []
         ctx_kwargs_list = self._context_kwargs_list(
             case_count=len(case_data), context=context
@@ -37,11 +35,12 @@ class MultiCaseEvaluator:
                 res.append(self.func(**kwargs))
         res = np.asarray(res, dtype=float)
         if self.op_points_count is not None:
-            res = res.reshape(-1, self.op_points_count)
+            count = rs.as_resolver(self.op_points_count)
+            res = res.reshape(-1, count.resolve(context))
         return res
 
     def _context_kwargs_list(
-        self, case_count: int, context: optwrap.Context | None = None
+        self, case_count: int, context: opt.Context | None = None
     ) -> list[dict]:
         if (context is None) or (self.context_arg_map is None):
             return [{} for _ in range(case_count)]

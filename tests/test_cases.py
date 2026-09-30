@@ -215,7 +215,7 @@ def test_build_guard_design():
     reg.add("a", lower=0, upper=10, default=1)
     reg.add("b", lower=0, upper=100, default=2)
     reg.add_operating_point_param(opt.OperatingPointParameter("rpm"))
-    reg.add_param(opt.Parameter("p1", 1000))
+    reg.add_param(opt.Parameter("p1", default=1000))
 
     # Construcst Operating Points
     ops = opt.OperatingPoints(rpm=[100, 200, 300])
