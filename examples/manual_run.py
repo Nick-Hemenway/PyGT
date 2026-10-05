@@ -112,7 +112,7 @@ data_sampled = SampledOutputParser().read(
 
 func = metrics.MultiCaseEvaluator(
     func=metrics.SignalAggregate(kind="max"),
-    arg_map={
+    dependencies={
         "index": Signal("angle"),
         "signal": Signal(Columns.CONTACT_PRESSURE_IDLE),
         "duration": "duration",

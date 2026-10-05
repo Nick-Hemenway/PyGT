@@ -120,26 +120,26 @@ def simulate(expanded: ExpandedCaseList) -> None:
     DataExporter().export(workspace=workspace, export_spec=export_spec)
 
 
-reg.add_provider(opt.Provider(name="caselist", func=CaseList.from_context))
-reg.add_provider(
-    opt.Provider(
+reg.add_node(opt.ComputedObject(name="caselist", func=CaseList.from_context))
+reg.add_node(
+    opt.ComputedObject(
         name="expanded",
         func=lambda caselist: ExpandedCaseList.from_license_count(
             caselist, guard_design=guard, licenses=licenses
         ),
     )
 )
-reg.add_provider(opt.Provider(name="run_sim", func=simulate))
-reg.add_provider(
-    opt.Provider(
+reg.add_node(opt.ComputedObject(name="run_sim", func=simulate))
+reg.add_node(
+    opt.ComputedObject(
         name="sim_data",
         func=lambda expanded, run_sim: ExportedOutputParser().read(
             spec=export_spec, workspace=workspace, caselist=expanded
         ),
     )
 )
-reg.add_provider(
-    opt.Provider(
+reg.add_node(
+    opt.ComputedObject(
         name="sim_data_sampled",
         func=lambda expanded, run_sim: SampledOutputParser().read(
             spec=sampled_spec, workspace=workspace, caselist=expanded
@@ -161,14 +161,14 @@ qda_exh = QDAResultsAlign(
     start_of_cycle_angle=-60,
     signals=exh_qda_cols,
 )
-reg.add_provider(
-    opt.Provider(
+reg.add_node(
+    opt.ComputedObject(
         name="case_data",
         func=lambda sim_data: [qda_int(qda_exh(case)) for case in sim_data.case_data],
     )
 )
-reg.add_provider(
-    opt.Provider(
+reg.add_node(
+    opt.ComputedObject(
         name="case_data_sampled",
         func=lambda sim_data_sampled: sim_data_sampled.case_data,
     )
@@ -178,29 +178,29 @@ m = opt.AggregatedMetric(
     name="overlap",
     func=metrics.MultiCaseEvaluator(
         func=lambda signal: np.squeeze(signal),
-        case_arg_map={
+        case_dependencies={
             "signal": Signal(SampledSignals.OVERLAP),
         },
         op_points_count=op_points.size,
     ),
-    arg_map={"case_data": "case_data_sampled"},
+    dependencies={"case_data": "case_data_sampled"},
     where=rs.Smallest(Op.RPM),
     agg=opt.aggregate.Squeeze(),
 )
 
 between_ramps_int = Window(Signal(Signals.INDEX), duration=Ref(Vars.INT_DURATION))
-reg.add_metric(m)
+reg.add_node(m)
 
 m1 = opt.AggregatedMetric(
     name="int_spring_margin",
     func=metrics.MultiCaseEvaluator(
         func=metrics.signal_min,
-        case_arg_map={
+        case_dependencies={
             "signal": Signal(Signals.QDA_INT_SPRING_MARGIN, where=between_ramps_int),
         },
         op_points_count=op_points.size,
     ),
-    arg_map={"case_data": "case_data"},
+    dependencies={"case_data": "case_data"},
     where=rs.EqualTo(Op.RPM, 2000),
     agg=opt.aggregate.Squeeze(),
 )
@@ -209,24 +209,24 @@ m2 = opt.AggregatedMetric(
     name="int_contact_pressure",
     func=metrics.MultiCaseEvaluator(
         func=metrics.signal_max,
-        case_arg_map={
+        case_dependencies={
             "signal": Signal(
                 Signals.QDA_INT_CONTACT_PRESSURE_IDLE, where=between_ramps_int
             ),
         },
         op_points_count=op_points.size,
     ),
-    arg_map={"case_data": "case_data"},
+    dependencies={"case_data": "case_data"},
     where=rs.EqualTo(Op.RPM, 2000),
     agg=opt.aggregate.Squeeze(),
 )
 
-reg.add_provider(
-    opt.Provider(
+reg.add_node(
+    opt.ComputedQuantity(
         name="impulse_width",
         func=metrics.MultiCaseEvaluator(
             func=cm.impulse_width,
-            case_arg_map={
+            case_dependencies={
                 "theta1": Vars.INT_THETA1,
                 "theta2": Vars.INT_THETA2,
                 "theta3": Vars.INT_THETA3,
@@ -234,7 +234,7 @@ reg.add_provider(
             },
             op_points_count=op_points.size,
         ),
-        arg_map={"case_data": "case_data"},
+        dependencies={"case_data": "case_data"},
     )
 )
 
@@ -247,13 +247,13 @@ m3 = opt.AggregatedMetric(
     agg=opt.aggregate.Squeeze(),
 )
 
-reg.add_provider(
-    opt.Provider(
+reg.add_node(
+    opt.ComputedQuantity(
         name="theta6",
         func=lambda t1, t2, t3, t4, t5, duration: np.asarray(
             duration / 2 - (t1 + t2 + t3 + t4 + t5)
         ).flatten(),
-        arg_map={
+        dependencies={
             "t1": Vars.INT_THETA1,
             "t2": Vars.INT_THETA2,
             "t3": Vars.INT_THETA3,
@@ -264,13 +264,13 @@ reg.add_provider(
     )
 )
 
-reg.add_metric(
+reg.add_node(
     opt.AggregatedMetric(
         name="theta_6",
         func=lambda t1, t2, t3, t4, t5, duration: (
             duration / 2 - (t1 + t2 + t3 + t4 + t5)
         ),
-        arg_map={
+        dependencies={
             "t1": Vars.INT_THETA1,
             "t2": Vars.INT_THETA2,
             "t3": Vars.INT_THETA3,
@@ -292,30 +292,30 @@ theta6_int_case_resolver = DV(Vars.INT_DURATION) / 2 - (
     + DV(Vars.INT_THETA5)
 )
 
-reg.add_metric(m1)
-reg.add_metric(m2)
-reg.add_metric(m3)
+reg.add_node(m1)
+reg.add_node(m2)
+reg.add_node(m3)
 
 
 m4 = opt.Metric(
     name="lubrication_number",
     func=metrics.MultiCaseEvaluator(
         func=cm.lubrication_number,
-        case_arg_map={
+        case_dependencies={
             "angle": Signal(Signals.INDEX),
             "entrainment_velocity": Signal(Signals.INT_ENTRAINMENT_VELOCITY),
         },
-        context_arg_map={"theta6": "theta6"},
+        context_dependencies={"theta6": "theta6"},
         op_points_count=op_points.size,
     ),
-    arg_map={"case_data": "case_data"},
+    dependencies={"case_data": "case_data", "context": opt.resolvers.CONTEXT},
 )
 
 m5 = opt.Metric(
     name="lift_area",
     func=metrics.MultiCaseEvaluator(
         func=cm.lift_area,
-        case_arg_map={
+        case_dependencies={
             "angle": Signal(Signals.INDEX),
             "lift": Signal(Signals.INT_LIFT),
             "ramp_height": Literal(0.1),
@@ -328,7 +328,7 @@ m6 = opt.Metric(
     name="position_margin",
     func=metrics.MultiCaseEvaluator(
         func=cm.bucket_lateral_position_margin,
-        case_arg_map={
+        case_dependencies={
             "position": Signal(Signals.INT_LATERAL_POSITION),
             "bucket_diameter": Literal(32),
         },
@@ -340,15 +340,17 @@ m7 = opt.Metric(
     name="min_neg_roc",
     func=metrics.MultiCaseEvaluator(
         func=cm.min_negative_radius_of_curvature,
-        case_arg_map={
+        case_dependencies={
             "roc": Signal(Signals.INT_ROC),
         },
         op_points_count=op_points.size,
     ),
 )
 
-reg.add_provider(
-    opt.Provider(name="scalar", func=lambda x: x, arg_map={"x": Literal(5)})
+reg.add_node(
+    opt.ComputedQuantity(
+        name="scalar", func=lambda x: x, dependencies={"x": Literal(5)}
+    )
 )
 
 
