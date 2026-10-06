@@ -8,7 +8,7 @@ import optwrap as opt
 
 import pygt as gt
 from pygt import metrics
-from pygt.resolvers import Signal, Window, Ref
+from pygt.resolvers import Ref, Signal, Window
 
 plt.set_loglevel("WARNING")
 logging.basicConfig(level=logging.INFO, filename="./logs/manual_run.log")
