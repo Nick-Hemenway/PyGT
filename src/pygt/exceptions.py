@@ -74,3 +74,12 @@ class InconsistentParametersError(Exception):
             'Either create a new workspace, or explicitly set "overwrite=True"'
         )
         super().__init__(message)
+
+
+class NonExistentWorkSpaceError(Exception):
+    def __init__(self):
+        message = (
+            "Repository is trying to access a workspace that does not exist\n"
+            "Maybe there are no workspaces create yet?"
+        )
+        super().__init__(message)

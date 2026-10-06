@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,28 +14,9 @@ from gt_vars import (
     sampled_signal_map,
 )
 
-import pygt.metrics.cam as cm
+import pygt as gt
 from pygt import metrics
-from pygt.cases import CaseList, ExpandedCaseList, build_guard_design
-from pygt.data_export import DataExporter
-from pygt.output_spec import ExportSpec, SampledOutputSpec
-from pygt.param_file import DesignWriter  # noqa
 from pygt.resolvers import Literal, Ref, ScalarExpand, Signal, Window
-from pygt.results_parse import (
-    ExportedOutputParser,
-    SampledOutputParser,
-)
-from pygt.results_sanitize import QDAResultsAlign
-from pygt.simulation import (
-    DistributedExecution,
-    SerialExecution,
-    clean_all_distributed_runs,
-)
-from pygt.workspace import (
-    KeepRecentPolicy,
-    WorkspaceFactory,
-    WorkspaceRepository,
-)
 
 plt.set_loglevel("INFO")
 logging.basicConfig(
@@ -46,29 +28,32 @@ logging.basicConfig(
 
 plt.style.use("bmh")
 
-export_spec = ExportSpec(
+export_spec = gt.ExportSpec(
     name="export",
     config_source="./gt_files/export_configuration_integrated.exp",
     output_filename="exported.txt",
     index_name=Signals.INDEX,
     name_map=export_signal_map,
 )
-sampled_spec = SampledOutputSpec(
+sampled_spec = gt.SampledOutputSpec(
     name="sampled",
     fname="RLT.trn",
     index_name=SampledSignals.INDEX,
     name_map=sampled_signal_map,
 )
 
-root = "./runs/runs_integrated"
-factory = WorkspaceFactory(model_path="./gt_files/integrated.gtm", root=root)
+root = Path("./runs/metrics")
+root.mkdir(exist_ok=True, parents=True)
+factory = gt.WorkspaceFactory(model_path="./gt_files/integrated.gtm", root=root)
 # workspace = factory.build(export_spec=export_spec)
 
-repo = WorkspaceRepository(root=root, retention_policy=KeepRecentPolicy(keep=5))
+repo = gt.WorkspaceRepository(
+    root=root, retention_policy=gt.workspace.KeepRecentPolicy(keep=5)
+)
 repo.refresh()
 repo.apply_retention_policy()
 workspace = repo.latest()
-clean_all_distributed_runs(repo)
+gt.clean_all_distributed_runs(repo)
 
 
 reg = opt.Registry()
@@ -102,29 +87,29 @@ op_points = opt.OperatingPoints(**{Op.RPM: [1000, 2000, 3000]})
 x0 = reg.pack()
 x1 = np.vstack([x0, 1.01 * x0, 1.02 * x0, 1.03 * x0])
 x1[1, 0] = 160  # Move int_valve_cl to cause wrapping
-guard = build_guard_design(reg, op_points)
+guard = gt.build_guard_design(reg, op_points)
 
 popsize = op_points.size * x1.shape[0]
 licenses = 3
 packet_size = int(popsize / licenses) + 1
 
 
-def simulate(expanded: ExpandedCaseList) -> None:
-    DesignWriter().write_file(caselist=expanded, workspace=workspace)
-    sim = SerialExecution()
-    sim = DistributedExecution(
+def simulate(expanded: gt.ExpandedCaseList) -> None:
+    gt.DesignWriter().write_file(caselist=expanded, workspace=workspace)
+    sim = gt.SerialExecution()
+    sim = gt.DistributedExecution(
         licenses=expanded.packet_count,
         packet_size=expanded.packet_size,
     )
     _ = sim.run(workspace)
-    DataExporter().export(workspace=workspace, export_spec=export_spec)
+    gt.DataExporter().export(workspace=workspace, export_spec=export_spec)
 
 
-reg.add_node(opt.ComputedObject(name="caselist", func=CaseList.from_context))
+reg.add_node(opt.ComputedObject(name="caselist", func=gt.CaseList.from_context))
 reg.add_node(
     opt.ComputedObject(
         name="expanded",
-        func=lambda caselist: ExpandedCaseList.from_license_count(
+        func=lambda caselist: gt.ExpandedCaseList.from_license_count(
             caselist, guard_design=guard, licenses=licenses
         ),
     )
@@ -133,7 +118,7 @@ reg.add_node(opt.ComputedObject(name="run_sim", func=simulate))
 reg.add_node(
     opt.ComputedObject(
         name="sim_data",
-        func=lambda expanded, run_sim: ExportedOutputParser().read(
+        func=lambda expanded, run_sim: gt.ExportedOutputParser().read(
             spec=export_spec, workspace=workspace, caselist=expanded
         ),
     )
@@ -141,7 +126,7 @@ reg.add_node(
 reg.add_node(
     opt.ComputedObject(
         name="sim_data_sampled",
-        func=lambda expanded, run_sim: SampledOutputParser().read(
+        func=lambda expanded, run_sim: gt.SampledOutputParser().read(
             spec=sampled_spec, workspace=workspace, caselist=expanded
         ),
     )
@@ -149,13 +134,13 @@ reg.add_node(
 int_qda_cols = [sig for sig in Signals if "qda_int" in sig]
 exh_qda_cols = [sig for sig in Signals if "qda_exh" in sig]
 
-qda_int = QDAResultsAlign(
+qda_int = gt.results_sanitize.QDAResultsAlign(
     timing_param=Vars.INT_VALVE_CL,
     intake=True,
     start_of_cycle_angle=-60,
     signals=int_qda_cols,
 )
-qda_exh = QDAResultsAlign(
+qda_exh = gt.results_sanitize.QDAResultsAlign(
     timing_param=Vars.EXH_VALVE_CL,
     intake=False,
     start_of_cycle_angle=-60,
@@ -225,7 +210,7 @@ reg.add_node(
     opt.ComputedQuantity(
         name="impulse_width",
         func=metrics.MultiCaseEvaluator(
-            func=cm.impulse_width,
+            func=metrics.cam.impulse_width,
             case_dependencies={
                 "theta1": Vars.INT_THETA1,
                 "theta2": Vars.INT_THETA2,
@@ -240,7 +225,7 @@ reg.add_node(
 
 m3 = opt.AggregatedMetric(
     name="stability",
-    func=lambda impulse_width: cm.stability(
+    func=lambda impulse_width: metrics.cam.stability(
         impulse_width=impulse_width, natural_freq_hz=1000, max_rpm=6600
     ),
     where=rs.FirstOperatingPoint(),
@@ -300,7 +285,7 @@ reg.add_node(m3)
 m4 = opt.Metric(
     name="lubrication_number",
     func=metrics.MultiCaseEvaluator(
-        func=cm.lubrication_number,
+        func=metrics.cam.lubrication_number,
         case_dependencies={
             "angle": Signal(Signals.INDEX),
             "entrainment_velocity": Signal(Signals.INT_ENTRAINMENT_VELOCITY),
@@ -314,7 +299,7 @@ m4 = opt.Metric(
 m5 = opt.Metric(
     name="lift_area",
     func=metrics.MultiCaseEvaluator(
-        func=cm.lift_area,
+        func=metrics.cam.lift_area,
         case_dependencies={
             "angle": Signal(Signals.INDEX),
             "lift": Signal(Signals.INT_LIFT),
@@ -327,7 +312,7 @@ m5 = opt.Metric(
 m6 = opt.Metric(
     name="position_margin",
     func=metrics.MultiCaseEvaluator(
-        func=cm.bucket_lateral_position_margin,
+        func=metrics.cam.bucket_lateral_position_margin,
         case_dependencies={
             "position": Signal(Signals.INT_LATERAL_POSITION),
             "bucket_diameter": Literal(32),
@@ -339,7 +324,7 @@ m6 = opt.Metric(
 m7 = opt.Metric(
     name="min_neg_roc",
     func=metrics.MultiCaseEvaluator(
-        func=cm.min_negative_radius_of_curvature,
+        func=metrics.cam.min_negative_radius_of_curvature,
         case_dependencies={
             "roc": Signal(Signals.INT_ROC),
         },
@@ -369,5 +354,53 @@ print(m5.evaluate(ctx))
 print(m6.evaluate(ctx))
 
 print("\ntheta6 resolved:", theta6_int_case_resolver.resolve(ctx.case_data[0]))
+
+
+def plot_qda_alignment(
+    int_col: str,
+    exh_col: str,
+    cases_before: list[gt.CaseData],
+    cases_after: list[gt.CaseData],
+):
+    fig_exh, ax_exh = plt.subplots(2, 1, sharex=True, figsize=(10, 8))
+    fig_int, ax_int = plt.subplots(2, 1, sharex=True, figsize=(10, 8))
+
+    for case0, case1 in zip(cases_before, cases_after):
+        x = case0.get("angle")
+        try:
+            y0 = case0.get(int_col)
+            y1 = case1.get(int_col)
+            ax_int[0].plot(x, y0)
+            ax_int[1].plot(x, y1)
+        except gt.exceptions.MissingSignalError:
+            pass
+
+        try:
+            y0 = case0.get(exh_col)
+            y1 = case1.get(exh_col)
+            ax_exh[0].plot(x, y0)
+            ax_exh[1].plot(x, y1)
+        except gt.exceptions.MissingSignalError:
+            pass
+
+    ax_exh[0].set_title(exh_col)
+    ax_int[0].set_title(int_col)
+
+    fig_int.tight_layout()
+    fig_exh.tight_layout()
+
+
+plot = True
+# plot = False
+
+if plot:
+    for int_, exh in zip(int_qda_cols, exh_qda_cols):
+        plot_qda_alignment(
+            int_,
+            exh,
+            cases_before=ctx.sim_data.case_data,
+            cases_after=ctx.case_data,
+        )
+
 
 logging.shutdown()

@@ -49,14 +49,14 @@ class MultiCaseEvaluator:
             self.context_dependencies
         )
         if (len(self.case_dependencies.args) > 0) and (
-            len(self.context_dependencies) > 0
+            len(self.context_dependencies.args) > 0
         ):
             raise ValueError(
                 "Positional arguments cannot be supplied for both case_dependencies "
                 "and context dependencies since the ordering of parameters becomes ambiguous"
             )
 
-    def __call__(self, case_data: list[CaseData], context: opt.Context | None = None):
+    def __call__(self, case_data: list[CaseData], context: opt.Context):
         results = []
         resolved_ctx_deps = self._context_dependencies(
             case_count=len(case_data), context=context

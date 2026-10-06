@@ -699,7 +699,7 @@ wheels = [
 [[package]]
 name = "optwrap"
 version = "8.0.0"
-source = { git = "https://github.com/Mercury-PDE-DesignAnalysisGroup/Optimization-Abstraction-Layer?branch=dev#dd6b04459cead8344766a29dafff4a86979d4dad" }
+source = { git = "https://github.com/Mercury-PDE-DesignAnalysisGroup/Optimization-Abstraction-Layer?branch=dev#45c781fc0efdb91ff242c98cf1dfa39a96a590ff" }
 dependencies = [
     { name = "numpy" },
     { name = "pymoo" },

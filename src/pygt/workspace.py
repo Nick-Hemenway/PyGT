@@ -13,6 +13,7 @@ from uuid import uuid4
 
 from .output_spec import ExportSpec
 from .util import sanitize_path
+from .exceptions import NonExistentWorkSpaceError
 
 logger = logging.getLogger(__name__)
 
@@ -258,13 +259,22 @@ class WorkspaceRepository:
         return list(self._workspaces.values())
 
     def latest(self) -> Workspace:
-        return self.to_sorted_list()[-1]
+        try:
+            return self.to_sorted_list()[-1]
+        except IndexError as e:
+            raise NonExistentWorkSpaceError() from e
 
     def previous(self) -> Workspace:
-        return self.to_sorted_list()[-2]
+        try:
+            return self.to_sorted_list()[-2]
+        except IndexError as e:
+            raise NonExistentWorkSpaceError() from e
 
     def oldest(self) -> Workspace:
-        return self.to_sorted_list()[0]
+        try:
+            return self.to_sorted_list()[0]
+        except IndexError as e:
+            raise NonExistentWorkSpaceError() from e
 
     def clean_all(self) -> None:
         for workspace in self._workspaces.values():
