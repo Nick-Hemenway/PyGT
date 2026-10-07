@@ -117,21 +117,21 @@ class CaseList:
     @classmethod
     def from_context(cls, context: Context, write_params: bool = True) -> Self:
         vars = {}
-        for key in context.names(vars=True):
+        for key in context._names(vars=True):
             vars[key] = np.asarray(getattr(context, key)).flatten(order="c")
 
         params = {}
-        for key in context.names(params=True):
+        for key in context._names(params=True):
             params[key] = np.asarray(getattr(context, key)).flatten(order="c")
         if len(params) == 0:
             params = None
 
         op_points = None
         op_point_size = None
-        if context.operating_points is not None:
-            op_point_size = context.operating_points.size
+        if context._operating_points is not None:
+            op_point_size = context._operating_points.size
             op_points = {}
-            for key in context.names(op_point_params=True):
+            for key in context._names(op_point_params=True):
                 op_points[key] = np.asarray(getattr(context, key)).flatten(order="c")
 
         return cls(
@@ -276,9 +276,9 @@ def build_guard_design(
         parameters=parameters,
     )
     guard_design = {}
-    for name in ctx.names(vars=True, params=True):
+    for name in ctx._names(vars=True, params=True):
         guard_design[name] = getattr(ctx, name).flatten()[0]
-    if ctx.operating_points is not None:
-        for name in ctx.names(op_point_params=True):
+    if ctx._operating_points is not None:
+        for name in ctx._names(op_point_params=True):
             guard_design[name] = getattr(ctx, name).flatten()[0]
     return guard_design
