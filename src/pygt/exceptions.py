@@ -1,0 +1,85 @@
+import logging
+from pathlib import Path
+from subprocess import CompletedProcess
+
+logger = logging.getLogger(__name__)
+
+
+class GTError(Exception):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
+        self.message = message
+        self.gt_info = gt_info
+        super().__init__(self.message)
+
+
+class GTLicenseError(GTError):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
+        super().__init__(message, gt_info)
+
+
+class GTFirstCaseFailedError(GTError):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
+        super().__init__(message, gt_info)
+
+
+class GTFailedExecution(GTError):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
+        super().__init__(message, gt_info)
+
+
+class GTFatalError(GTError):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
+        super().__init__(message, gt_info)
+
+
+class GTDistributedSubmissionFail(GTError):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
+        super().__init__(message, gt_info)
+
+
+class GTDistributedFetchFail(GTError):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
+        super().__init__(message, gt_info)
+
+
+class GTNotFoundError(GTError):
+    def __init__(self, message: str = "", gt_info: CompletedProcess | None = None):
+        super().__init__(message, gt_info)
+
+
+class FileNotUpdatedError(Exception):
+    def __init__(self, message, path: Path | str | None = None):
+        self.message = message
+        self.path = path
+        super().__init__(self.message)
+
+
+class MissingSignalError(Exception):
+    def __init__(
+        self,
+        signal: str,
+        design_id: int | None = None,
+        case_id: int | None = None,
+    ):
+        self.signal = signal
+        message = f'Signal "{signal}" is not present in CaseData. '
+        message += f"Design ID: {design_id} Case ID: {case_id}"
+        super().__init__(message)
+
+
+class InconsistentParametersError(Exception):
+    def __init__(self):
+        message = (
+            "Existing parameter file is not consistent with cases being provided to DesignWriter. "
+            'Either create a new workspace, or explicitly set "overwrite=True"'
+        )
+        super().__init__(message)
+
+
+class NonExistentWorkSpaceError(Exception):
+    def __init__(self):
+        message = (
+            "Repository is trying to access a workspace that does not exist\n"
+            "Maybe there are no workspaces create yet?"
+        )
+        super().__init__(message)
