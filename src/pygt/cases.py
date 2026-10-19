@@ -121,7 +121,7 @@ class CaseList:
             vars[key] = np.asarray(getattr(context, key)).flatten(order="c")
 
         params = {}
-        for key in context._names(params=True):
+        for key in context._names(parameters=True):
             params[key] = np.asarray(getattr(context, key)).flatten(order="c")
         if len(params) == 0:
             params = None
@@ -131,7 +131,7 @@ class CaseList:
         if context._operating_points is not None:
             op_point_size = context._operating_points.size
             op_points = {}
-            for key in context._names(op_point_params=True):
+            for key in context._names(op_point_parameters=True):
                 op_points[key] = np.asarray(getattr(context, key)).flatten(order="c")
 
         return cls(
@@ -268,17 +268,31 @@ def build_guard_design(
     operating_points: OperatingPoints | None = None,
     parameters: Parameters | None = None,
 ) -> dict[str, float]:
-    # Create default design
-    x0 = registry.pack()
-    ctx = registry.context_physical(
-        x0,
-        operating_points=operating_points,
-        parameters=parameters,
-    )
     guard_design = {}
-    for name in ctx._names(vars=True, params=True):
-        guard_design[name] = getattr(ctx, name).flatten()[0]
-    if ctx._operating_points is not None:
-        for name in ctx._names(op_point_params=True):
-            guard_design[name] = getattr(ctx, name).flatten()[0]
+
+    # First add all default variables
+    for name, var in registry.variables.items():
+        if var.default is None:
+            raise ValueError(f"Default value for '{name}' is None")
+        guard_design[name] = var.default
+
+    if operating_points is None:
+        operating_points = OperatingPoints()
+    for name, param in registry.operating_point_parameters.items():
+        if name in operating_points.values:
+            guard_design[name] = getattr(operating_points, name).flatten()[0]
+        else:
+            if param.default is None:
+                raise ValueError(f"No default value for '{name}'")
+            guard_design[name] = param.default
+
+    if parameters is None:
+        parameters = Parameters()
+    for name, param in registry.parameters.items():
+        if name in parameters.values:
+            guard_design[name] = getattr(parameters, name)
+        else:
+            if param.default is None:
+                raise ValueError(f"No default value for '{name}'")
+            guard_design[name] = param.default
     return guard_design

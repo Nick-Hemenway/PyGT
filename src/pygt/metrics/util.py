@@ -7,7 +7,7 @@ import numpy as np
 import optwrap as opt
 import optwrap.resolvers as rs
 from optwrap import Context, Dependencies
-from optwrap.nodes import (
+from optwrap.dependencies import (
     ResolvedDependencies,
     resolve_dependencies,
     sanitize_dependencies,
