@@ -67,10 +67,16 @@ class MultiCaseEvaluator:
             except MissingSignalError as e:
                 logger.warning("%s", e)
                 results.append(None)
-            else:
-                args = (*resolved_case_deps.args, *ctx_deps.args)
-                kwargs = resolved_case_deps.kwargs | ctx_deps.kwargs
+                continue
+
+            args = (*resolved_case_deps.args, *ctx_deps.args)
+            kwargs = resolved_case_deps.kwargs | ctx_deps.kwargs
+            try:
                 results.append(self.func(*args, **kwargs))
+            except Exception:
+                logger.exception("Failed to evaluate metric %s", self.func)
+                results.append(None)
+
         results = np.asarray(results, dtype=float)
         if self.op_points_count is not None:
             count = rs.as_resolver(self.op_points_count)
