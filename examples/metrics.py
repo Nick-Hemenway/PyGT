@@ -80,7 +80,7 @@ reg.add(Vars.EXH_THETA5, lower=0, upper=20, default=8)
 reg.add(Vars.EXH_F1, lower=0, upper=4, default=1.130)
 reg.add(Vars.EXH_F3, lower=0, upper=4, default=1.140)
 reg.add(Vars.EXH_F4, lower=0, upper=4, default=1.916)
-reg.add_operating_point_param(opt.OperatingPointParameter(Op.RPM))
+reg.add_operating_point_parameter(opt.OperatingPointParameter(Op.RPM))
 
 op_points = opt.OperatingPoints(**{Op.RPM: [1000, 2000, 3000]})
 
@@ -353,7 +353,7 @@ print(m4.evaluate(ctx))
 print(m5.evaluate(ctx))
 print(m6.evaluate(ctx))
 
-print("\ntheta6 resolved:", theta6_int_case_resolver.resolve(ctx.case_data[0]))
+print("\ntheta6 resolved:", theta6_int_case_resolver.resolve(ctx.case_data()[0]))
 
 
 def plot_qda_alignment(
@@ -398,8 +398,8 @@ if plot:
         plot_qda_alignment(
             int_,
             exh,
-            cases_before=ctx.sim_data.case_data,
-            cases_after=ctx.case_data,
+            cases_before=ctx.sim_data().case_data,
+            cases_after=ctx.case_data(),
         )
 
 
