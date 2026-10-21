@@ -243,13 +243,18 @@ class WorkspaceRepository:
             self._workspaces[workspace.run_id] = workspace
         logger.debug("Discovered workspaces %s", list(self._workspaces.keys()))
 
-    def apply_retention_policy(self):
+    def apply_retention_policy(self, raise_on_error: bool = False):
         to_delete = self.retention_policy.select_for_deletion(self.to_list())
         for workspace in to_delete:
             logger.info(
                 "Removing workspace %s due to retention policy", workspace.run_id
             )
-            workspace.cleanup()
+            try:
+                workspace.cleanup()
+            except Exception:
+                logger.exception("Cannot remove workspace %s", workspace.run_id)
+                if raise_on_error:
+                    raise
         self.refresh()
 
     def to_sorted_list(self) -> list[Workspace]:
