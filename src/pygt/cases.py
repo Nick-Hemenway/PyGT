@@ -36,14 +36,15 @@ class CaseList:
             }
 
         # Ensure that size of arrays provided is divisible by number of operating points
-        if self.operating_points is not None:
-            if (self.size % self.op_point_size) != 0:
-                raise ValueError(
-                    f"Operating point size ({self.op_point_size}) is not consistent with the number of cases ({self.size})"
-                )
+        if (self.operating_points is not None) and (
+            (self.size % self.op_point_size) != 0
+        ):
+            raise ValueError(
+                f"Operating point size ({self.op_point_size}) is not consistent with the number of cases ({self.size})"
+            )
 
         # Construct cached values and ensure arrays are broadcastable
-        self.values
+        _ = self.values
 
     @cached_property
     def values(self) -> dict[str, np.ndarray]:

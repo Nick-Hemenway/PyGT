@@ -11,14 +11,11 @@ from .signal import (
 )
 
 __all__ = [
-    # Re-exported from optwrap
-    Literal,
-    Ref,
-    # from misc.py
-    ScalarExpand,
-    # From signal.py
-    Between,
-    Signal,
-    SignalMask,
-    Window,
+    "Between",
+    "Literal",
+    "Ref",
+    "ScalarExpand",
+    "Signal",
+    "SignalMask",
+    "Window",
 ]

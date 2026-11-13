@@ -1,5 +1,5 @@
 import logging
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 from numpy.typing import NDArray
@@ -87,10 +87,8 @@ class QDAResultsAlign:
             # The whole case must have failed for the index to not be present
             # We'll just return the original CaseData object directly and log a warning
             logger.warning(
-                (
-                    "Case does not have index signal present "
-                    "and thus QDA alignment cannot be performed. "
-                )
+                "Case does not have index signal present "
+                "and thus QDA alignment cannot be performed. "
             )
             logger.warning("Case Status: %s", case.status)
             return case

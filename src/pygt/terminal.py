@@ -17,7 +17,9 @@ class SubprocessRunner:
     ) -> subprocess.CompletedProcess:
         logger.info("Starting subprocess: %s", cmds)
         start = perf_counter()
-        outputs = subprocess.run(cmds, capture_output=True, text=True, shell=True)
+        outputs = subprocess.run(
+            cmds, capture_output=True, text=True, shell=True, check=True
+        )
         stop = perf_counter()
         m, s = divmod(stop - start, 60)
         logger.info("Subprocess complete")

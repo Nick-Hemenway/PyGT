@@ -57,7 +57,7 @@ class SerialExecution(ExecutionStrategy):
         if self.other_flags is None:
             self.other_flags = []
         if not isinstance(self.other_flags, (list, tuple)):
-            raise ValueError("other_flags must be list, tuple, or None")
+            raise TypeError("other_flags must be list, tuple, or None")
         if self.runner is None:
             self.runner = SubprocessRunner()
 
@@ -81,10 +81,8 @@ class SerialExecution(ExecutionStrategy):
     def _run_once(self, workspace: Workspace) -> SerialExecutionResult:
         if self.use_param_file and not workspace.param_file_path.exists():
             raise RuntimeError(
-                (
-                    "Param file required for simulation but "
-                    "it does not exist in the current workspace"
-                )
+                "Param file required for simulation but "
+                "it does not exist in the current workspace"
             )
         cmds = self._build_commands(workspace)
         # Watch .glx file and make sure it's updated. Otherwise raise exception
@@ -129,13 +127,13 @@ class SerialExecution(ExecutionStrategy):
         )
         try:
             out = wrapper(self._run_once)(workspace)
-        except Exception as exc:
+        except Exception:
             logger.exception(
                 "Simulation was not successful. Check logs at %s for more info",
                 workspace.logs_dir,
             )
             workspace.mark_failed()
-            raise exc
+            raise
         else:
             logger.info("Simulation completed in %s", out.runtime)
             workspace.mark_completed()
@@ -200,11 +198,11 @@ class DistributedExecution(ExecutionStrategy):
         if self.other_submit_flags is None:
             self.other_submit_flags = []
         if not isinstance(self.other_submit_flags, (list, tuple)):
-            raise ValueError("other_submit_flags must be list, tuple, or None")
+            raise TypeError("other_submit_flags must be list, tuple, or None")
         if self.other_fetch_flags is None:
             self.other_fetch_flags = []
         if not isinstance(self.other_fetch_flags, (list, tuple)):
-            raise ValueError("other_fetch_flags must be list, tuple, or None")
+            raise TypeError("other_fetch_flags must be list, tuple, or None")
         if self.runner is None:
             self.runner = SubprocessRunner()
 
@@ -252,10 +250,8 @@ class DistributedExecution(ExecutionStrategy):
     def _run_once(self, workspace: Workspace) -> DistributedExecutionResult:
         if self.use_param_file and not workspace.param_file_path.exists():
             raise RuntimeError(
-                (
-                    "Param file required for simulation but "
-                    "it does not exist in the current workspace"
-                )
+                "Param file required for simulation but "
+                "it does not exist in the current workspace"
             )
         # Watch .glx file and make sure it's updated. Otherwise raise exception
         with RequireFileTouch(workspace.model_path.with_suffix(".glx")):
@@ -298,13 +294,13 @@ class DistributedExecution(ExecutionStrategy):
         )
         try:
             out = wrapper(self._run_once)(workspace)
-        except Exception as exc:
+        except Exception:
             logger.exception(
                 "Simulation was not successful. Check logs at %s for more info",
                 workspace.logs_dir,
             )
             workspace.mark_failed()
-            raise exc
+            raise
         else:
             logger.info("Simulation completed in: %s", out.runtime)
             workspace.mark_completed()

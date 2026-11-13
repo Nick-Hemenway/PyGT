@@ -70,9 +70,9 @@ class DataExporter:
         )
         try:
             out = wrapper(self._export_once)(workspace, export_spec)
-        except Exception as e:
+        except Exception:
             logger.exception("Exporting of spec %s failed", export_spec.name)
-            raise e
+            raise
         else:
             logger.info("Data successfully exported")
             workspace.mark_exported()

@@ -1,7 +1,7 @@
 import logging
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import optwrap as opt
@@ -114,18 +114,14 @@ class MultiCaseEvaluator:
                 count = len(arg)
             except TypeError as e:
                 raise ValueError(
-                    (
-                        "All context attributes must have the same length as number "
-                        "of cases but attribute doesn't have length attribute"
-                    )
+                    "All context attributes must have the same length as number "
+                    "of cases but attribute doesn't have length attribute"
                 ) from e
             else:
                 if count != case_count:
                     raise ValueError(
-                        (
-                            "All context attributes must have the same length as number "
-                            f"of cases but attribute has length of {count}"
-                        )
+                        "All context attributes must have the same length as number "
+                        f"of cases but attribute has length of {count}"
                     )
 
 

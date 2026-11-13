@@ -9,12 +9,9 @@ from .util import (
 )
 
 __all__ = [
-    # from package
-    cam,
-    # from generic.py
-    signal_max,
-    signal_min,
-    # util.py
-    MultiCaseEvaluator,
-    qda_op_point_index,
+    "MultiCaseEvaluator",
+    "cam",
+    "qda_op_point_index",
+    "signal_max",
+    "signal_min",
 ]

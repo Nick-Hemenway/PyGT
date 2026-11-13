@@ -31,7 +31,7 @@ class Between(AbstractResolver[CaseData, NDArray[np.bool_]]):
 
     def __post_init__(self):
         if not isinstance(self.name, Signal):
-            raise ValueError(f"{self.name} must be a Signal resolver")
+            raise TypeError(f"{self.name} must be a Signal resolver")
         self.lower = as_resolver(self.lower)
         self.upper = as_resolver(self.upper)
 
@@ -50,7 +50,7 @@ class Window(AbstractResolver[CaseData, NDArray[np.bool_]]):
 
     def __post_init__(self):
         if not isinstance(self.name, Signal):
-            raise ValueError(f"{self.name} must be a Signal resolver")
+            raise TypeError(f"{self.name} must be a Signal resolver")
         self.duration = as_resolver(self.duration)
 
     def resolve(self, case: CaseData) -> NDArray[np.bool_]:

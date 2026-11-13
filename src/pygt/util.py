@@ -92,7 +92,7 @@ class RequireFileTouch:
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_value is not None:
             raise exc_value
-        for path in self.last_times.keys():
+        for path in self.last_times:
             old_time = self.last_times[path]
             old_hash = self.last_hash[path]
             new_time = last_mod_time(path)

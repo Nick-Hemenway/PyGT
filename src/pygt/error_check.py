@@ -59,7 +59,7 @@ def raise_on_sim_out_file_errors(workspace: Workspace) -> None:
     try:
         txt = workspace.model_path.with_suffix(".out").read_text()
     except FileNotFoundError:
-        return None
+        return
 
     if ("Cannot continue to the next case" in txt) and ("Start of Case 2" not in txt):
         raise exc.GTFirstCaseFailedError("Cannot continue to the next case")

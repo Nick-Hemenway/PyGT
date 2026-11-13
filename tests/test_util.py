@@ -129,45 +129,39 @@ def test_file_watcher_file_overwritten_with_same_content(file1: Path, watcher: W
 
 def test_file_watcher_file_touched_but_only_read(file1: Path):
     touch(file1)
-    with pytest.raises(FileNotUpdatedError):
-        with RequireFileTouch(file1):
-            _ = file1.read_text()
+    with pytest.raises(FileNotUpdatedError), RequireFileTouch(file1):
+        _ = file1.read_text()
 
 
 def test_file_watcher_file_should_not_be_read(file1: Path):
     touch(file1)
-    with pytest.raises(RuntimeError):
-        with RequireFileCreation(file1):
-            _ = file1.read_text()
+    with pytest.raises(RuntimeError), RequireFileCreation(file1):
+        _ = file1.read_text()
 
 
 @pytest.mark.parametrize("watcher", [RequireFileTouch, RequireFileCreation])
 def test_file_watcher_file_not_created(file1: Path, watcher: Watcher):
-    with pytest.raises(FileNotUpdatedError):
-        with watcher(file1):
-            pass
+    with pytest.raises(FileNotUpdatedError), watcher(file1):
+        pass
 
 
 @pytest.mark.parametrize("watcher", [RequireFileTouch, RequireFileCreation])
 def test_file_watcher_file_created_but_not_updated(file1: Path, watcher: Watcher):
     touch(file1)
-    with pytest.raises(FileNotUpdatedError):
-        with watcher(file1):
-            pass
+    with pytest.raises(FileNotUpdatedError), watcher(file1):
+        pass
 
 
 @pytest.mark.parametrize("watcher", [RequireFileTouch, RequireFileCreation])
 def test_file_watcher_one_file_not_created(file1: Path, file2: Path, watcher: Watcher):
-    with pytest.raises(FileNotUpdatedError):
-        with watcher(file1, file2):
-            touch(file1)
+    with pytest.raises(FileNotUpdatedError), watcher(file1, file2):
+        touch(file1)
 
 
 @pytest.mark.parametrize("watcher", [RequireFileTouch, RequireFileCreation])
 def test_file_watcher_both_file_not_created(file1: Path, file2: Path, watcher: Watcher):
-    with pytest.raises(FileNotUpdatedError):
-        with watcher(file1, file2):
-            pass
+    with pytest.raises(FileNotUpdatedError), watcher(file1, file2):
+        pass
 
 
 @pytest.mark.parametrize("watcher", [RequireFileTouch, RequireFileCreation])
@@ -192,10 +186,12 @@ def test_file_watcher_same_time_stamp_and_same_content(file1: Path):
     # File timestamps are read as the same and content is the same
     # so an error is raised
     touch(file1)
-    with patch("pygt.util.last_mod_time", return_value=0):
-        with pytest.raises(FileNotUpdatedError):
-            with RequireFileTouch(file1):
-                touch_force_future(file1)
+    with (
+        patch("pygt.util.last_mod_time", return_value=0),
+        pytest.raises(FileNotUpdatedError),
+        RequireFileTouch(file1),
+    ):
+        touch_force_future(file1)
 
 
 def test_file_watcher_same_time_stamp_and_same_content_but_file_regenerated(
@@ -204,9 +200,8 @@ def test_file_watcher_same_time_stamp_and_same_content_but_file_regenerated(
     # File timestamps are read as the same and content is the same
     # so an error is raised
     touch(file1)
-    with patch("pygt.util.last_mod_time", return_value=0):
-        with RequireFileCreation(file1):
-            touch_force_future(file1)
+    with patch("pygt.util.last_mod_time", return_value=0), RequireFileCreation(file1):
+        touch_force_future(file1)
 
 
 @pytest.mark.parametrize("watcher", [RequireFileTouch, RequireFileCreation])
@@ -214,6 +209,5 @@ def test_file_watcher_same_time_stamp_but_different_content(
     file1: Path, watcher: Watcher
 ):
     touch(file1)
-    with patch("pygt.util.last_mod_time", return_value=0):
-        with watcher(file1):
-            file1.write_text("different content")
+    with patch("pygt.util.last_mod_time", return_value=0), watcher(file1):
+        file1.write_text("different content")

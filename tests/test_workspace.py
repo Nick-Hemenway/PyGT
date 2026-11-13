@@ -83,7 +83,7 @@ def test_repository_to_list(
     repo: WorkspaceRepository, list_of_workspaces: list[Workspace]
 ):
     repo.refresh()
-    assert all([ws in list_of_workspaces for ws in repo.to_list()])
+    assert all(ws in list_of_workspaces for ws in repo.to_list())
 
 
 def test_repository_latest(
@@ -117,7 +117,7 @@ def test_repository_clean_all(
     repo.clean_all()
     not_present = []
     for workspace in list_of_workspaces:
-        not_present.append((not workspace.path.exists()))
+        not_present.append(not workspace.path.exists())
     assert all(not_present)
 
 

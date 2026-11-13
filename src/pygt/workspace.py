@@ -107,7 +107,7 @@ class Workspace:
         tmp.replace(self.metadata_path)
 
     @classmethod
-    def from_metadata(cls, metadata: dict) -> "Workspace":
+    def from_metadata(cls, metadata: dict) -> Workspace:
         return cls(
             root=Path(metadata["root"]),
             run_id=metadata["run_id"],

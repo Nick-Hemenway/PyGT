@@ -132,7 +132,7 @@ class SimulationData:
 
     def __post_init__(self):
         if not isinstance(self.caselist, (CaseList, ExpandedCaseList)):
-            raise ValueError("caselist must be either CaseList or ExpandedCaseList")
+            raise TypeError("caselist must be either CaseList or ExpandedCaseList")
 
     @cached_property
     def case_data(self) -> list[CaseData]:

@@ -52,7 +52,7 @@ class DesignWriter:
             logger.info(
                 'Not writing parameter file because it already exists and "overwrite"=False'
             )
-            return None
+            return
 
         workspace.param_file_path.write_text(text)
         logger.info("Finished writing parameter file")
