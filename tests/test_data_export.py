@@ -4,8 +4,9 @@ from subprocess import CompletedProcess
 from unittest.mock import MagicMock, patch
 
 import pytest
+from jinja2 import UndefinedError
 
-from pygt import DataExporter, ExportSpec, Workspace
+from pygt import DataExporter, ExportSpec, TemplateSource, Workspace, WorkspaceFactory
 from pygt.base import ProcessRunner
 from pygt.exceptions import FileNotUpdatedError, GTLicenseError
 from tests.helpers import FunctionSwitch, WriteFile
@@ -115,3 +116,30 @@ def test_export_raises_error_if_file_never_updated(
             export_spec=export_spec1,
             overwrite=True,
         )
+
+
+def get_spec(path: Path, context: dict) -> ExportSpec:
+    return ExportSpec(
+        name="exported_from_template",
+        source=TemplateSource(source=path, context=context),
+        output_filename="test.txt",
+        index_name="hello",
+        name_map={"a": "b"},
+    )
+
+
+def test_template_raises_on_missing_fields(tmp_path: Path, factory: WorkspaceFactory):
+    f = tmp_path / "export_config_template.cfg"
+    f.write_text("A variable {{var1}}, and another {{var2}}")
+    spec = get_spec(f, context={})
+    with pytest.raises(UndefinedError):
+        factory.build(spec)
+
+
+def test_template_materializes(tmp_path: Path, factory: WorkspaceFactory):
+    f = tmp_path / "export_config_template.cfg"
+    f.write_text("A variable {{var1}}, and another {{var2}}")
+    spec = get_spec(f, context={"var1": 100, "var2": 200})
+    ws = factory.build(spec)
+    text = ws.export_config_path(spec).read_text()
+    assert text == "A variable 100, and another 200"
