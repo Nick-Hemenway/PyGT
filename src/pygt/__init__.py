@@ -26,6 +26,9 @@ from .cases import (
 from .data_export import (
     DataExporter,
 )
+from .export_file import (
+    build_qda_indices,
+)
 from .output_spec import (
     ExportSpec,
     FileSource,
@@ -86,6 +89,7 @@ __all__ = [
     "WorkspaceFactory",
     "WorkspaceRepository",
     "build_guard_design",
+    "build_qda_indices",
     "cases",
     "clean_all_distributed_runs",
     "clean_distributed_run",
