@@ -28,6 +28,7 @@ from .data_export import (
 )
 from .export_file import (
     build_qda_indices,
+    get_template_variables,
 )
 from .output_spec import (
     ExportSpec,
@@ -95,6 +96,7 @@ __all__ = [
     "clean_distributed_run",
     "data_export",
     "exceptions",
+    "get_template_variables",
     "metrics",
     "output_spec",
     "param_file",

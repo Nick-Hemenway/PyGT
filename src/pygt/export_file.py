@@ -67,7 +67,7 @@ def build_qda_indices(qda_rpms: dict[str, float], case_rpm: float) -> dict[str, 
 # ---------------------------------------------------------------------------- #
 
 
-def get_variables(path: Path | str) -> tuple[str]:
+def get_template_variables(path: Path | str) -> tuple[str]:
     env = Environment()
     text = Path(path).read_text()
     ast = env.parse(text)
