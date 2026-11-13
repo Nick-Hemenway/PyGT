@@ -18,7 +18,7 @@ class SubprocessRunner:
         logger.info("Starting subprocess: %s", cmds)
         start = perf_counter()
         outputs = subprocess.run(
-            cmds, capture_output=True, text=True, shell=True, check=True
+            cmds, capture_output=True, text=True, shell=True, check=False
         )
         stop = perf_counter()
         m, s = divmod(stop - start, 60)
