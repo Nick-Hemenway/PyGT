@@ -83,7 +83,12 @@ class Workspace:
         return self.path / "workspace.json"
 
     def export_config_path(self, spec: ExportSpec) -> Path:
-        return self.export_configs_dir / spec.source.source.name
+        if isinstance(spec.source, FileSource):
+            return self.export_configs_dir / spec.source.source.name
+        elif isinstance(spec.source, TemplateSource):
+            return self.export_configs_dir / spec.source.source.with_suffix(".exp").name
+        else:
+            raise TypeError(f"Spec source is invalid type: {type(spec.source)}")
 
     def export_output_path(self, spec: ExportSpec) -> Path:
         return self.results_dir / spec.output_filename
@@ -205,6 +210,8 @@ class WorkspaceFactory:
             self._copy(src=spec.source.source, dst=new_config)
         elif isinstance(spec.source, TemplateSource):
             new_config = workspace.export_configs_dir / spec.source.source.name
+            # remove template extension for clarity
+            new_config = new_config.with_suffix(".exp")
             text = populate_jinja_template(
                 source=spec.source.source, context=spec.source.context
             )
