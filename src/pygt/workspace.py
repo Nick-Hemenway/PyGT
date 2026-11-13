@@ -12,7 +12,8 @@ from typing import Literal, Protocol
 from uuid import uuid4
 
 from .exceptions import NonExistentWorkSpaceError
-from .output_spec import ExportSpec
+from .export_file import populate_jinja_template
+from .output_spec import ExportSpec, FileSource, TemplateSource
 from .util import sanitize_path
 
 logger = logging.getLogger(__name__)
@@ -82,7 +83,7 @@ class Workspace:
         return self.path / "workspace.json"
 
     def export_config_path(self, spec: ExportSpec) -> Path:
-        return self.export_configs_dir / spec.config_source.name
+        return self.export_configs_dir / spec.source.source.name
 
     def export_output_path(self, spec: ExportSpec) -> Path:
         return self.results_dir / spec.output_filename
@@ -142,6 +143,16 @@ class Workspace:
         self.set_status(WorkspaceStatus.EXPORTED)
 
 
+def copy(src: Path, dst: Path, mode: Literal["hardlink", "copy"]):
+    src, dst = Path(src), Path(dst)
+    if mode.lower() == "hardlink":
+        dst.hardlink_to(src)
+    elif mode.lower() == "copy":
+        shutil.copy2(src=src, dst=dst)
+    else:
+        raise ValueError("Invalid value provided for copy mode")
+
+
 @dataclass
 class WorkspaceFactory:
     model_path: Path | str
@@ -178,8 +189,7 @@ class WorkspaceFactory:
             if isinstance(export_spec, ExportSpec):
                 export_spec = [export_spec]
             for spec in export_spec:
-                new_config = ws.export_configs_dir / spec.config_source.name
-                self._copy(src=spec.config_source, dst=new_config)
+                self._materialize_export_config_file(workspace=ws, spec=spec)
 
         # Mark work space as created
         # this automatically triggers writing the metadata file
@@ -187,13 +197,23 @@ class WorkspaceFactory:
         ws.mark_created()
         return ws
 
-    def _copy(self, src: Path, dst: Path) -> None:
-        if self.mode.lower() == "hardlink":
-            dst.hardlink_to(src)
-        elif self.mode.lower() == "copy":
-            shutil.copy2(src=src, dst=dst)
+    def _materialize_export_config_file(
+        self, workspace: Workspace, spec: ExportSpec
+    ) -> None:
+        if isinstance(spec.source, FileSource):
+            new_config = workspace.export_configs_dir / spec.source.source.name
+            self._copy(src=spec.source.source, dst=new_config)
+        elif isinstance(spec.source, TemplateSource):
+            new_config = workspace.export_configs_dir / spec.source.source.name
+            text = populate_jinja_template(
+                source=spec.source.source, context=spec.source.context
+            )
+            new_config.write_text(text)
         else:
-            raise ValueError("Invalid value provided for copy mode")
+            raise TypeError(f"Invalid type for ExportSpec source: {type(spec.source)}")
+
+    def _copy(self, src: Path, dst: Path) -> None:
+        copy(src, dst, mode=self.mode)
 
 
 class RetentionPolicy(Protocol):

@@ -30,7 +30,7 @@ plt.style.use("bmh")
 
 export_spec = gt.ExportSpec(
     name="export",
-    config_source="./gt_files/export_configuration_integrated.exp",
+    source="./gt_files/export_configuration_integrated.exp",
     output_filename="exported.txt",
     index_name=Signals.INDEX,
     name_map=export_signal_map,

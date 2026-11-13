@@ -28,7 +28,9 @@ from .data_export import (
 )
 from .output_spec import (
     ExportSpec,
+    FileSource,
     SampledOutputSpec,
+    TemplateSource,
 )
 from .param_file import (
     DesignWriter,
@@ -73,11 +75,13 @@ __all__ = [
     "ExpandedCaseList",
     "ExportSpec",
     "ExportedOutputParser",
+    "FileSource",
     "SampledOutputParser",
     "SampledOutputSpec",
     "SerialExecution",
     "SerialExecutionResult",
     "SimulationData",
+    "TemplateSource",
     "Workspace",
     "WorkspaceFactory",
     "WorkspaceRepository",

@@ -2,7 +2,13 @@ from pathlib import Path
 
 import pytest
 
-from pygt import ExportSpec, Workspace, WorkspaceFactory, WorkspaceRepository
+from pygt import (
+    ExportSpec,
+    FileSource,
+    Workspace,
+    WorkspaceFactory,
+    WorkspaceRepository,
+)
 
 
 @pytest.fixture
@@ -26,7 +32,7 @@ def export_spec1(tmp_path: Path) -> ExportSpec:
     f.write_text("export settings")
     return ExportSpec(
         name="exported",
-        config_source=f,
+        source=FileSource(f),
         output_filename="export_results1.txt",
         index_name="angle",
         name_map={"col1": "temperature"},
@@ -39,7 +45,7 @@ def export_spec2(tmp_path: Path) -> ExportSpec:
     f.write_text("export settings")
     return ExportSpec(
         name="exported",
-        config_source=f,
+        source=FileSource(f),
         output_filename="export_results2.txt",
         index_name="angle",
         name_map={"col1": "speed"},
