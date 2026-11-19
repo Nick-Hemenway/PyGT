@@ -30,6 +30,9 @@ from .export_file import (
     build_qda_indices,
     get_template_variables,
 )
+from .gtm_parse import (
+    GTMFileParser,
+)
 from .output_spec import (
     ExportSpec,
     FileSource,
@@ -80,6 +83,7 @@ __all__ = [
     "ExportSpec",
     "ExportedOutputParser",
     "FileSource",
+    "GTMFileParser",
     "SampledOutputParser",
     "SampledOutputSpec",
     "SerialExecution",
