@@ -9,8 +9,31 @@ from scipy.optimize import root_scalar
 logger = logging.getLogger(__name__)
 
 
-def impulse_width(theta1: float, theta2: float, theta3: float, theta4: float) -> float:
-    return sum([theta1, theta2, theta3, theta4])
+def impulse_width_multipoly14(theta1: float, theta2: float, theta3: float) -> float:
+    return sum([theta1, theta2, theta3])
+
+
+def impulse_width(angle: NDArray, accel: NDArray) -> float:
+    # first only look at opening cycle
+    mask = angle <= 0
+    angle = angle[mask]
+    accel = accel[mask]
+    idx = np.argmax(accel)
+    # look left
+    # Slice up to and including max and reverse order
+    reversed = accel[:: (idx + 1)][::-1]
+    left_offset = np.argmax(reversed <= 0)
+    if left_offset == 0:
+        left_offset = idx  # corresponds to first element
+
+    # look right
+    right_offset = np.argmax(accel[idx::] <= 0)
+    if right_offset <= 0:
+        raise ValueError("Impulse width right offset from max accel invalid")
+
+    right = idx + right_offset
+    left = idx - left_offset
+    return angle[right] - angle[left]
 
 
 def stability(impulse_width: float, natural_freq_hz: float, max_rpm: float) -> float:
