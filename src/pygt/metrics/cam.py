@@ -138,3 +138,11 @@ def theta6(
     theta5: NDArray,
 ) -> NDArray:
     return duration / 2 - (theta1 + theta2 + theta3 + theta4 + theta5)
+
+
+def duration(angle: NDArray, lift: NDArray, ramp_height: float) -> float:
+    func = CubicSpline(angle, lift)
+    residual = lambda angle: func(angle) - ramp_height
+    sol_left = root_scalar(residual, bracket=[angle[0], 0])
+    sol_right = root_scalar(residual, bracket=[0, angle[-1]])
+    return sol_right.root - sol_left.root
