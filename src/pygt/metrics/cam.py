@@ -17,13 +17,11 @@ def stability(impulse_width: float, natural_freq_hz: float, max_rpm: float) -> f
     return (impulse_width * natural_freq_hz) / (180 * (max_rpm / 60))
 
 
-def lubrication_number(
-    angle: NDArray, entrainment_velocity: NDArray, theta6: float
-) -> float:
+def lubrication_number(angle: NDArray, entrainment_velocity: NDArray) -> float:
     angle = np.asarray(angle)
     entrainment_velocity = np.asarray(entrainment_velocity)
-    mask = (angle > -theta6) & (angle < theta6)
-    return 2 * np.abs(entrainment_velocity[mask]).min()
+    idx = np.argmin(np.abs(angle))
+    return 2 * np.abs(entrainment_velocity[idx]).min()
 
 
 def lift_area(angle: NDArray, lift: NDArray, ramp_height: float) -> float:
