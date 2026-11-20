@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Callable
+from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
@@ -104,6 +105,54 @@ class QDAResultsAlign:
                     wrap_offset=self.wrap_offset(case, sig),
                     angle_offset=angle_offset,
                 )
+        return CaseData(
+            case_id=case.case_id,
+            design_id=case.design_id,
+            design_variables=case.design_variables,
+            operating_point=case.operating_point,
+            index_name=case.index_name,
+            signals=signals,
+            status=case.status,
+            required_signals=case.required_signals,
+        )
+
+
+@dataclass
+class BetweenRamps:
+    signals: list[str]
+    duration: float
+    expand_window: int = 1
+
+    def __call__(self, case: CaseData) -> CaseData:
+        try:
+            x = case.get(case.index_name)
+        except MissingSignalError:
+            # The whole case must have failed for the index to not be present
+            # We'll just return the original CaseData object directly and log a warning
+            logger.warning(
+                "Case does not have index signal present "
+                "and thus QDA alignment cannot be performed. "
+            )
+            logger.warning("Case Status: %s", case.status)
+            return case
+
+        mask = (x >= -self.duration / 2) & (x <= self.duration / 2)
+        if self.expand_window > 0:
+            expanded = mask.copy()
+            for i in range(1, self.expand_window + 1):
+                expanded[:-i] |= mask[i:]
+                expanded[i:] |= mask[:-i]
+            mask = expanded
+
+        signals = {case.index_name: x[mask]}
+        for sig in self.signals:
+            try:
+                y = case.get(sig)
+            except MissingSignalError:
+                continue
+            else:
+                signals[sig] = y[mask]
+
         return CaseData(
             case_id=case.case_id,
             design_id=case.design_id,
